@@ -31,7 +31,7 @@ toc::[]
 == CLI Interface (cli.py)
 
 * ✅ Set up Typer application framework
-* [square]#▢# Implement 'chat' command with required options
+* ✅ Implement 'chat' command with required options
 * [square]#▢# Implement 'batch' command with file input
 * [square]#▢# Add help documentation for all commands
 

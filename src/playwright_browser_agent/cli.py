@@ -1,6 +1,13 @@
 """Command-line interface for the Playwright Browser Agent."""
 
+from typing import Optional
+
 import typer
+
+# Import config loading and agent logic (agent.py will be created later)
+from .config import load_config
+
+# from .agent import run_chat_loop # Placeholder for agent import
 
 app = typer.Typer(
     name="pb-agent",
@@ -15,8 +22,60 @@ def main_callback():
     pass
 
 @app.command()
-def chat():
-    print("Starting chat mode...")
+def chat(
+    llm_provider: Optional[str] = typer.Option(
+        None,
+        "--llm-provider",
+        "-p",
+        help="LLM provider to use (e.g., 'openai', 'anthropic', 'google'). Reads from LLM_PROVIDER env var if not set.",
+    ),
+    llm_model: Optional[str] = typer.Option(
+        None,
+        "--llm-model",
+        "-m",
+        help="Specific LLM model to use (e.g., 'gpt-4o', 'claude-3-opus-20240229'). Reads from LLM_MODEL env var if not set.",
+    ),
+    headless: bool = typer.Option(
+        False,
+        "--headless",
+        help="Run the browser in headless mode (no GUI).",
+    ),
+    record: bool = typer.Option(
+        False,
+        "--record",
+        help="Record browser interactions by saving screenshots to the artifacts directory.",
+    ),
+):
+    """Starts an interactive chat session to control the browser agent."""
+    print("Starting interactive chat mode...")
+
+    # Load configuration, applying CLI overrides
+    # Note: Pydantic settings load env vars automatically
+    # CLI args passed here will override env vars
+    try:
+        config = load_config(
+            llm_provider=llm_provider,
+            llm_model=llm_model,
+            headless=headless,
+            record=record,
+        )
+    except SystemExit:
+        # Config validation failed (e.g., missing API key), error already printed
+        raise typer.Exit(code=1)
+
+    print(f"Using LLM: {config.llm_provider}/{config.llm_model}")
+    print(f"Headless mode: {config.headless}")
+    print(f"Recording screenshots: {config.record}")
+
+    # Placeholder: Call the agent's chat loop (to be implemented in agent.py)
+    print("\n>>> Placeholder: Agent chat loop would start here <<<\n")
+    # try:
+    #     run_chat_loop(config)
+    # except Exception as e:
+    #     print(f"\nError during chat loop: {e}", file=sys.stderr)
+    #     raise typer.Exit(code=1)
+
+    print("Chat session ended.")
 
 @app.command()
 def batch(file: str):
