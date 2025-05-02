@@ -10,6 +10,7 @@ toc::[]
 
 * [square]#▢# = Pending task
 * ✅ = Completed task
+* ⭕ = Pending Approval
 * ❌ = Failed task
 * ❓ = Needs clarification
 
