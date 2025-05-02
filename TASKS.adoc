@@ -17,7 +17,7 @@ toc::[]
 == Project Setup
 
 * ✅ Create project structure with required files
-* [square]#▢# Initialize Python 3.13 environment with uv
+* ✅ Initialize Python 3.13 environment with uv
 * [square]#▢# Configure pyproject.toml with dependencies
 * [square]#▢# Set up console_scripts entry point for 'pb-agent'
 
