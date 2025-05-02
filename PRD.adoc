@@ -12,7 +12,7 @@ toc::[]
 == 2. Overview / Purpose
 
 Demonstrate how an internal engineer can instruct a Large-Language-Model
-(LLM)–powered LangChain agent to drive a Playwright-MCP browser session
+(LLM)–powered LangGraph agent to drive a Playwright-MCP browser session
 end-to-end. The CLI-based demo should highlight real-time streaming of
 agent thoughts/actions, optional screenshot capture, and flexible LLM
 back-end configuration via LiteLLM.
@@ -40,7 +40,7 @@ produces timestamped PNGs in `artifacts/`
 
 * Python 3.13 is available.
 * Dependency management uses `uv` (`uv venv`, `uv add …`).
-* Playwright-MCP server is auto-launched by LangChain tooling (no manual
+* Playwright-MCP server is auto-launched by LangGraph tooling (no manual
 Node command).
 * LLM credentials are supplied via `.env` using LiteLLM conventions
 (e.g. `OPENAI_API_KEY`).
@@ -113,7 +113,7 @@ and Node runtime for MCP (handled by Playwright install script).
 [mermaid]
 ----
 graph LR
-  CLI["Engineer CLI<br/>(Typer / argparse in cli.py)"] --> Agent["LangChain Agent<br/>(agent.py)<br/>• Chat model via LiteLLM<br/>• Tool: Playwright-MCP"]
+  CLI["Engineer CLI<br/>(Typer / argparse in cli.py)"] --> Agent["LangGraph Agent<br/>(agent.py)<br/>• Chat model via LiteLLM<br/>• Tool: Playwright-MCP"]
   Agent --> Node["@playwright/mcp Node Server<br/>(spawned automatically)"]
   Node --> Browser["Chromium / Firefox / WebKit"]
 ----
@@ -125,7 +125,7 @@ graph LR
 |Milestone |Owner |Est. Effort
 |Project scaffold (`uv` env, packaging) |Dev |0.5 day
 |CLI skeleton with Typer & flags |Dev |1 day
-|LangChain agent w/ LiteLLM config |Dev |1 day
+|LangGraph agent w/ LiteLLM config |Dev |1 day
 |Integrate Playwright-MCP tool |Dev |1.5 days
 |Interactive chat flow |Dev |1 day
 |Batch execution flow |Dev |0.5 day

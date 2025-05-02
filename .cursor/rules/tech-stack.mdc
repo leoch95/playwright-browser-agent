@@ -36,10 +36,10 @@ This rule aggregates the core engineering principles and stack-specific conventi
 * Provide explicit flag types & defaults; surface `--help` examples.
 * Stream output rather than buffering when possible (`rich` optional, not required).
 
-## LangChain
+## LangGraph
 
 * Build agents/tools in [agent.py](mdc:agent.py); keep prompts in [prompts.py](mdc:prompts.py).
-* Use `langchain-mcp-adapters` to connect LangChain agents to a running Playwright MCP server.
+* Use `langchain-mcp-adapters` to connect LangGraph agents to a running Playwright MCP server.
 * Always enable streaming for chat models.
 * Catch and log tool exceptions, retry with `tenacity` if transient.
 
@@ -51,7 +51,7 @@ This rule aggregates the core engineering principles and stack-specific conventi
 ## Playwright-MCP
 
 * The project uses the `@playwright/mcp` NPM package as the MCP server, which is expected to be running independently or managed externally.
-* The `langchain-mcp-adapters` package handles the connection between the LangChain agent and the MCP server.
+* The `langchain-mcp-adapters` package handles the connection between the LangGraph agent and the MCP server.
 * Support `--headless` flag consistently across chat & batch (this likely configures the adapter/server connection).
 * Screenshot path logic lives only in `prompts.build` to keep single responsibility.
 
@@ -68,7 +68,7 @@ This rule aggregates the core engineering principles and stack-specific conventi
 ## Documentation
 
 * Any code snippet appearing in docs **must** be runnable verbatim in a fresh clone after `uv sync && uv run python -m pytest`.
-* Link to upstream docs (e.g. Typer, LangChain, Playwright) for advanced usage rather than replicating them here.
+* Link to upstream docs (e.g. Typer, LangGraph, Playwright) for advanced usage rather than replicating them here.
 
 ---
 

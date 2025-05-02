@@ -83,54 +83,70 @@ def batch(
 
 == 4. Agent Core (agent.py)
 
-Instantiate a streaming chat agent wired to the Playwright-MCP tool via `langchain-mcp-adapters`.
+Instantiate a streaming chat agent using LangGraph, wired to the Playwright-MCP tool via `langchain-mcp-adapters`.
 
 [source,python]
 ----
-# Example imports (adjust based on actual LangChain/adapter structure)
-from langchain.agents import AgentExecutor, create_react_agent
-from langchain_community.chat_models import ChatLiteLLM # Assuming LangChain has a LiteLLM wrapper
-from langchain_mcp_adapters.tools import PlaywrightMCPTool # Assuming adapter provides a tool class
-from langchain_core.prompts import ChatPromptTemplate
-# from langchain import hub # Potentially for pulling standard prompts
+# Example imports (adjust based on actual structure)
+from langgraph.prebuilt import create_react_agent
+from langchain_community.chat_models import ChatLiteLLM
+from langchain_mcp_adapters.client import MultiServerMCPClient # Import the MCP client
+# Assume prompts.py and config.py are correctly set up
 
 class Agent:
+    # NOTE: Initialization and running methods likely need to be async
+    # due to the async nature of MultiServerMCPClient and agent invocation.
+    # Simplified here for design clarity.
+
     def __init__(self, cfg):
         self.cfg = cfg
-        # 1. Initialize LLM via LangChain, configured to use LiteLLM
-        self.llm = ChatLiteLLM(provider=cfg.provider, model=cfg.model, **cfg.model_params, streaming=True)
+        # 1. Initialize LLM
+        self.llm = ChatLiteLLM(provider=cfg.provider, model=cfg.model, streaming=True)
 
-        # 2. Initialize the Playwright MCP tool via the adapter
-        # Actual connection/tool loading logic (potentially async) is simplified here
-        mcp_tool = PlaywrightMCPTool(headless=cfg.headless) # Placeholder for tool setup
-        tools = [mcp_tool]
+        # 2. Setup MCP Client (details abstracted for design doc)
+        # The actual implementation would use 'async with MultiServerMCPClient(...)'
+        # and pass the necessary server config (command, path, headless etc.)
+        # For the design, we represent getting tools conceptually:
+        # mcp_client = MultiServerMCPClient(cfg.mcp_server_config)
+        # tools = mcp_client.get_tools() # Conceptual - actual call is async
+        tools = self._load_mcp_tools_sync() # Placeholder for sync representation
 
-        # 3. Get the prompt template (assuming prompts.build returns a LangChain compatible template)
-        # react_prompt = hub.pull("hwchase17/react") # Example: Use a standard ReAct prompt
-        # prompt = react_prompt.partial(system_message=prompts.build(cfg.record))
-        # NOTE: prompts.build needs to return a LangChain compatible prompt template
-        prompt_template = prompts.build(self.cfg.record)
+        # 3. Prepare system message/prompt
+        system_message = prompts.build(self.cfg.record)
 
-        # 4. Create the LangChain agent
-        agent = create_react_agent(self.llm, tools, prompt_template)
+        # 4. Create the LangGraph agent graph
+        self.graph = create_react_agent(
+            self.llm,
+            tools=tools,
+            state_modifier=system_message # Pass prompt via state_modifier
+        )
 
-        # 5. Create the Agent Executor to run the agent
-        self.agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, handle_parsing_errors=True)
+    def _load_mcp_tools_sync(self):
+        # Placeholder: In reality, this involves async setup and client.get_tools()
+        # For the design doc, we just indicate that tools are loaded.
+        # Example tool (replace with actual loaded tool)
+        from langchain_mcp_adapters.tools import PlaywrightMCPTool
+        return [PlaywrightMCPTool(headless=self.cfg.headless)]
 
     def run_chat_loop(self):
-        # Simplified loop: Actual implementation will need async/streaming
+        # Simplified loop using the LangGraph agent
+        print("Starting chat loop (simplified). Use 'exit' or 'bye' to quit.")
         while True:
-            u = input(">>> ")
-            if u.lower() in ("exit","bye"): break
-            # Invoke executor (sync shown for simplicity, use astream in reality)
-            response = self.agent_executor.invoke({"input": u})
-            print(f"RESPONSE: {response.get('output', 'Processing...')}")
+            user_input = input(">>> ")
+            if user_input.lower() in ("exit", "bye"): break
+            # Actual invocation would be async: await self.graph.ainvoke(...)
+            response = self.graph.invoke({"messages": [("user", user_input)]})
+            # Extract final message (simplified)
+            final_message = response.get("messages", [])[-1]
+            print(f"RESPONSE: {getattr(final_message, 'content', '...')}")
 
     def send(self, user_str):
+        # Simplified send using the LangGraph agent
         print(f"Processing: {user_str}")
-        # Invoke executor (sync shown for simplicity, use astream in reality)
-        response = self.agent_executor.invoke({"input": user_str})
-        print(f"RESPONSE: {response.get('output', 'Processed.')}")
+        # Actual invocation would be async: await self.graph.ainvoke(...)
+        response = self.graph.invoke({"messages": [("user", user_str)]})
+        final_message = response.get("messages", [])[-1]
+        print(f"RESPONSE: {getattr(final_message, 'content', '...')}")
 ----
 
 == 5. System Prompt Templates (prompts.py)

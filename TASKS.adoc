@@ -39,10 +39,9 @@ toc::[]
 
 * [square]#▢# Initialize `ChatLiteLLM` (or equivalent) for model access
 * [square]#▢# Initialize `PlaywrightMCPTool` from `langchain-mcp-adapters`
-* [square]#▢# Use `create_react_agent` to build the agent instance
-* [square]#▢# Create `AgentExecutor` to run the agent
-* [square]#▢# Implement `run_chat_loop` using `AgentExecutor.invoke` (or `astream`)
-* [square]#▢# Implement `send` method using `AgentExecutor.invoke` (or `astream`)
+* [square]#▢# Use `langgraph.prebuilt.create_react_agent` to build the compiled agent graph
+* [square]#▢# Implement `run_chat_loop` using the compiled graph's `stream` method
+* [square]#▢# Implement `send` method using the compiled graph's `invoke` method
 * [square]#▢# Ensure streaming output is properly configured and handled
 
 == Prompts System (prompts.py)
