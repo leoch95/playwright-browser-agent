@@ -69,7 +69,7 @@ toc::[]
 == Documentation
 
 * ✅ Add inline code documentation
-* [square]#▢# Create README with usage examples
+* ✅ Create README with usage examples
 * [square]#▢# Document environment setup requirements
 * [square]#▢# Create sample batch files
 
