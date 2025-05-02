@@ -12,7 +12,8 @@ This rule guides the systematic implementation of the Playwright Browser Agent a
 1. **Follow tasks in order** - Implement tasks from [TASKS.adoc](mdc:TASKS.adoc) sequentially, following the task grouping structure
 2. **Cross-reference documentation** - Always refer to [PRD.adoc](mdc:PRD.adoc) for product requirements and [DESIGN.adoc](mdc:DESIGN.adoc) for technical implementation details
 3. **Update task status** - Mark tasks as complete using the status legend from [TASKS.adoc](mdc:TASKS.adoc):
-   * `▢` → `✅` = Completed task
+   * `▢` → `⭕` = Pending Approval (implemented but awaiting user review)
+   * `⭕` → `✅` = Completed task (after user approval)
    * `▢` → `❌` = Failed task
    * `▢` → `❓` = Needs clarification
 4. **MANDATORY: Request user approval** - After completing each task, explicitly ask the user to review and approve before moving on
@@ -24,8 +25,9 @@ For each task:
 1. **Identify the task** - Select the next pending `▢` task from [TASKS.adoc](mdc:TASKS.adoc)
 2. **Research requirements** - Find relevant details in [PRD.adoc](mdc:PRD.adoc) and [DESIGN.adoc](mdc:DESIGN.adoc)
 3. **Implement solution** - Follow the design patterns and code snippets in [DESIGN.adoc](mdc:DESIGN.adoc)
-4. **Update task status** - Change `▢` to the appropriate status (✅/❌/❓) in [TASKS.adoc](mdc:TASKS.adoc)
+4. **Update to pending approval** - Change `▢` to `⭕` (Pending Approval) in [TASKS.adoc](mdc:TASKS.adoc)
 5. **CRITICAL: Request user review** - Always ask "Would you like to review this implementation before moving to the next task?" and wait for explicit approval
+6. **Update to completed** - Once approved, update status from `⭕` to `✅` before proceeding to next task
 
 ## Implementation Priority
 
@@ -57,3 +59,4 @@ Follow the exact grouping and sequence in [TASKS.adoc](mdc:TASKS.adoc):
 - Provide a clear summary of what was implemented to help user review
 - If user provides feedback without explicit approval, treat it as a request for changes
 - Ask explicitly "Shall I proceed to the next task?" if user feedback is unclear
+- First action after receiving approval: update status from `⭕` to `✅` in [TASKS.adoc](mdc:TASKS.adoc)
