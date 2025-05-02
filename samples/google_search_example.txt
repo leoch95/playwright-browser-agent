@@ -1,0 +1,9 @@
+# Sample batch instructions for playwright-browser-agent
+# One instruction per line.
+
+navigate to https://google.com
+type \"playwright documentation python\" into the search bar and submit
+browser_snapshot
+click the link containing \"Overview | Playwright Python\"
+browser_snapshot
+take_screenshot
