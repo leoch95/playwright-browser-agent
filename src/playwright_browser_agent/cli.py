@@ -78,8 +78,68 @@ def chat(
     print("Chat session ended.")
 
 @app.command()
-def batch(file: str):
+def batch(
+    file: str = typer.Argument(
+        ..., # Ellipsis marks it as required
+        help="Path to the file containing batch instructions, one per line.",
+    ),
+    llm_provider: Optional[str] = typer.Option(
+        None,
+        "--llm-provider",
+        "-p",
+        help="LLM provider override for batch mode.",
+    ),
+    llm_model: Optional[str] = typer.Option(
+        None,
+        "--llm-model",
+        "-m",
+        help="LLM model override for batch mode.",
+    ),
+    headless: bool = typer.Option(
+        False,
+        "--headless",
+        help="Run the browser in headless mode for batch processing.",
+    ),
+    record: bool = typer.Option(
+        False,
+        "--record",
+        help="Record screenshots during batch processing.",
+    ),
+):
+    """Processes browser instructions from a file in batch mode."""
     print(f"Starting batch mode with file: {file}")
+
+    # Load configuration, applying CLI overrides
+    try:
+        config = load_config(
+            llm_provider=llm_provider,
+            llm_model=llm_model,
+            headless=headless,
+            record=record,
+        )
+    except SystemExit:
+        raise typer.Exit(code=1)
+
+    print(f"Using LLM: {config.llm_provider}/{config.llm_model}")
+    print(f"Headless mode: {config.headless}")
+    print(f"Recording screenshots: {config.record}")
+
+    # Placeholder: Read file and call agent's batch processing function
+    try:
+        with open(file, 'r') as f:
+            instructions = [line.strip() for line in f if line.strip()]
+        print(f"Read {len(instructions)} instructions from {file}.")
+        # Placeholder for batch processing logic
+        print("\n>>> Placeholder: Agent batch processing would run here <<<\n")
+        # run_batch_processing(config, instructions)
+    except FileNotFoundError:
+        print(f"Error: Batch file not found at {file}", file=sys.stderr)
+        raise typer.Exit(code=1)
+    except Exception as e:
+        print(f"\nError during batch processing: {e}", file=sys.stderr)
+        raise typer.Exit(code=1)
+
+    print("Batch processing finished.")
 
 if __name__ == "__main__":
     # This allows running the CLI directly via `python -m src.playwright_browser_agent.cli` for testing
