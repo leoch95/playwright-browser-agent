@@ -18,7 +18,10 @@ app = typer.Typer(
 
 @app.callback()
 def main_callback():
-    """Main entry point callback for basic setup or version check (optional)."""
+    """Main entry point callback, invoked before any command.
+
+    Can be used for global setup, version checks, etc. Currently a placeholder.
+    """
     # Placeholder for potential global options like --version
     pass
 
