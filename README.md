@@ -33,6 +33,20 @@ A browser automation agent powered by Playwright and driven by Large Language Mo
     ```
 
 4. **Configure Environment Variables:**
+    The agent relies on environment variables for configuration, especially for selecting the LLM and providing API keys. These can be set directly in your shell or, more conveniently, placed in a `.env` file in the project root.
+
+    **Required Variables:**
+    * `LLM_PROVIDER`: Specifies the LLM provider to use (e.g., `openai`, `anthropic`, `google`, `ollama`, etc.). Must match a provider supported by LiteLLM.
+    * `LLM_MODEL`: Specifies the exact model name for the chosen provider (e.g., `gpt-4o`, `claude-3-opus-20240229`, `gemini/gemini-1.5-pro-latest`, `llama3`).
+    * **Provider API Key:** You must set the corresponding API key environment variable for your chosen `LLM_PROVIDER`. Common examples include:
+        * `OPENAI_API_KEY` (for `openai` provider)
+        * `ANTHROPIC_API_KEY` (for `anthropic` provider)
+        * `GOOGLE_API_KEY` (for `google` provider)
+        * Refer to the [LiteLLM documentation](https://docs.litellm.ai/docs/providers) for the specific key names required by other providers.
+
+    **Optional Variables:**
+    * Variables corresponding to CLI flags (like `HEADLESS`, `RECORD`) can also be set in `.env`, but CLI flags will always take precedence.
+
     Create a `.env` file in the project root and add the required API keys for your chosen LLM provider(s). For example:
 
     ```dotenv
@@ -47,7 +61,7 @@ A browser automation agent powered by Playwright and driven by Large Language Mo
     # ANTHROPIC_API_KEY=sk-ant-...
     ```
 
-    The agent requires `LLM_PROVIDER` and `LLM_MODEL` to be set either in `.env` or via CLI flags. API keys corresponding to the chosen provider must also be present as environment variables (e.g., `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`).
+    The agent will validate these environment variables at startup. If `LLM_PROVIDER` or `LLM_MODEL` are missing, or if the required API key for the selected provider is not found in the environment, the application will exit with an error message.
 
 ## Usage
 
