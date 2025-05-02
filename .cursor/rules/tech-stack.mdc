@@ -39,6 +39,7 @@ This rule aggregates the core engineering principles and stack-specific conventi
 ## LangChain
 
 * Build agents/tools in [agent.py](mdc:agent.py); keep prompts in [prompts.py](mdc:prompts.py).
+* Use `langchain-mcp-adapters` to connect LangChain agents to a running Playwright MCP server.
 * Always enable streaming for chat models.
 * Catch and log tool exceptions, retry with `tenacity` if transient.
 
@@ -49,8 +50,9 @@ This rule aggregates the core engineering principles and stack-specific conventi
 
 ## Playwright-MCP
 
-* Spawn Node subprocess lazily; register shutdown hooks via [utils.py](mdc:utils.py).
-* Support `--headless` flag consistently across chat & batch.
+* The project uses the `@playwright/mcp` NPM package as the MCP server, which is expected to be running independently or managed externally.
+* The `langchain-mcp-adapters` package handles the connection between the LangChain agent and the MCP server.
+* Support `--headless` flag consistently across chat & batch (this likely configures the adapter/server connection).
 * Screenshot path logic lives only in `prompts.build` to keep single responsibility.
 
 ## python-dotenv (Config)

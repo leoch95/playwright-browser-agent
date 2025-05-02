@@ -27,14 +27,14 @@ This rule describes the intended code structure, file responsibilities, and CLI/
 - `pb-agent batch <file>`: Reads instructions from a file, executes each line, and waits for keypress at end.
 - Both modes support `--headless` (run browser headless) and `--record` (save PNG screenshots after each step).
 - Streaming output: Agent thoughts/actions/observations are streamed to STDOUT in real time.
-- On exit or signal, all browser/context and background processes must be shut down cleanly.
+- On exit or signal, the Python application cleans up its resources. Management of the external Playwright MCP server is handled separately.
 
 ---
 
 ## Implementation Notes
 
 - All config is loaded via config.py, with CLI flags taking precedence over .env.
-- The agent uses LiteLLM for LLM abstraction and Playwright-MCP for browser automation (Node subprocess is auto-launched).
+- The agent uses LiteLLM for LLM abstraction and `langchain-mcp-adapters` to connect to the externally managed Playwright-MCP server (`@playwright/mcp` Node process).
 - Screenshot PNGs (if `--record`) are saved under `artifacts/<timestamp>/step_<N>.png`.
 - Error handling: Retries/timeouts for browser actions, clear logging of failures.
 
