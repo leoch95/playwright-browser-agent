@@ -1,5 +1,5 @@
 ---
-description:
+description: Guidance for development or task implementation workflow
 globs:
 alwaysApply: false
 ---
@@ -49,7 +49,11 @@ Follow the exact grouping and sequence in [TASKS.adoc](mdc:TASKS.adoc):
 
 ## User Approval Protocol
 
-- Never proceed to the next task without explicit user approval
-- If user requests changes, implement them and seek approval again
-- Consider approval only received when user explicitly confirms with "approved", "looks good", "yes", etc.
+- NEVER proceed to the next task without EXPLICIT user approval
+- Multiple review iterations may be required - be patient and responsive to all feedback
+- Implement ALL requested changes and seek approval again after each revision
+- Consider approval ONLY received when user explicitly confirms with phrases like "approved", "looks good", "proceed to next task", etc.
+- STOP and wait for user instruction if approval is ambiguous
 - Provide a clear summary of what was implemented to help user review
+- If user provides feedback without explicit approval, treat it as a request for changes
+- Ask explicitly "Shall I proceed to the next task?" if user feedback is unclear
