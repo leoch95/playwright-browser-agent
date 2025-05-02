@@ -37,12 +37,13 @@ toc::[]
 
 == Agent Core (agent.py)
 
-* [square]#▢# Integrate LiteLLM for model access
-* [square]#▢# Create PlaywrightMCP tool wrapper
-* [square]#▢# Implement streaming output mechanism
-* [square]#▢# Build agent construction logic
-* [square]#▢# Create interactive chat loop
-* [square]#▢# Implement batch processing logic
+* [square]#▢# Initialize `ChatLiteLLM` (or equivalent) for model access
+* [square]#▢# Initialize `PlaywrightMCPTool` from `langchain-mcp-adapters`
+* [square]#▢# Use `create_react_agent` to build the agent instance
+* [square]#▢# Create `AgentExecutor` to run the agent
+* [square]#▢# Implement `run_chat_loop` using `AgentExecutor.invoke` (or `astream`)
+* [square]#▢# Implement `send` method using `AgentExecutor.invoke` (or `astream`)
+* [square]#▢# Ensure streaming output is properly configured and handled
 
 == Prompts System (prompts.py)
 
