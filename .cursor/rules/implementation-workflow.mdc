@@ -15,6 +15,7 @@ This rule guides the systematic implementation of the Playwright Browser Agent a
    * `▢` → `✅` = Completed task
    * `▢` → `❌` = Failed task
    * `▢` → `❓` = Needs clarification
+4. **MANDATORY: Request user approval** - After completing each task, explicitly ask the user to review and approve before moving on
 
 ## Implementation Checklist
 
@@ -24,7 +25,7 @@ For each task:
 2. **Research requirements** - Find relevant details in [PRD.adoc](mdc:PRD.adoc) and [DESIGN.adoc](mdc:DESIGN.adoc)
 3. **Implement solution** - Follow the design patterns and code snippets in [DESIGN.adoc](mdc:DESIGN.adoc)
 4. **Update task status** - Change `▢` to the appropriate status (✅/❌/❓) in [TASKS.adoc](mdc:TASKS.adoc)
-5. **Request review** - Before moving to the next task, ask the user to review/approve
+5. **CRITICAL: Request user review** - Always ask "Would you like to review this implementation before moving to the next task?" and wait for explicit approval
 
 ## Implementation Priority
 
@@ -45,3 +46,10 @@ Follow the exact grouping and sequence in [TASKS.adoc](mdc:TASKS.adoc):
 - Follow Python best practices as outlined in the tech-stack rule
 - Maintain consistent style with code examples in [DESIGN.adoc](mdc:DESIGN.adoc)
 - Ensure each module matches its specified responsibilities
+
+## User Approval Protocol
+
+- Never proceed to the next task without explicit user approval
+- If user requests changes, implement them and seek approval again
+- Consider approval only received when user explicitly confirms with "approved", "looks good", "yes", etc.
+- Provide a clear summary of what was implemented to help user review
