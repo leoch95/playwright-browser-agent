@@ -26,11 +26,11 @@ toc::[]
 * ✅ Implement dotenv loading
 * ✅ Create config merging logic for multiple sources
 * ✅ Add validation for required API keys
-* [square]#▢# Implement config object structure
+* ✅ Implement config object structure
 
 == CLI Interface (cli.py)
 
-* [square]#▢# Set up Typer application framework
+* ✅ Set up Typer application framework
 * [square]#▢# Implement 'chat' command with required options
 * [square]#▢# Implement 'batch' command with file input
 * [square]#▢# Add help documentation for all commands
