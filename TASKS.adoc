@@ -37,12 +37,12 @@ toc::[]
 
 == Agent Core (agent.py)
 
-* [square]#▢# Initialize `ChatLiteLLM` (or equivalent) for model access
-* [square]#▢# Initialize `PlaywrightMCPTool` from `langchain-mcp-adapters`
-* [square]#▢# Use `langgraph.prebuilt.create_react_agent` to build the compiled agent graph
-* [square]#▢# Implement `run_chat_loop` using the compiled graph's `stream` method
-* [square]#▢# Implement `send` method using the compiled graph's `invoke` method
-* [square]#▢# Ensure streaming output is properly configured and handled
+* ✅ Initialize `ChatLiteLLM` (or equivalent) for model access
+* ✅ Initialize `PlaywrightMCPTool` from `langchain-mcp-adapters`
+* ✅ Use `langgraph.prebuilt.create_react_agent` to build the compiled agent graph
+* ✅ Implement `run_chat_loop` using the compiled graph's `stream` method
+* ✅ Implement `send` method using the compiled graph's `invoke` method
+* ✅ Ensure streaming output is properly configured and handled
 
 == Prompts System (prompts.py)
 
