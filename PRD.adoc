@@ -1,0 +1,155 @@
+= Playwright Browser Agent Demo – Product Requirement Document (PRD)
+:toc:
+:toc-placement!:
+
+toc::[]
+
+== 1. Title & Version
+
+* *Project Name:* Playwright Browser Agent Demo
+* *Version:* 0.1.0
+
+== 2. Overview / Purpose
+
+Demonstrate how an internal engineer can instruct a Large-Language-Model
+(LLM)–powered LangChain agent to drive a Playwright-MCP browser session
+end-to-end. The CLI-based demo should highlight real-time streaming of
+agent thoughts/actions, optional screenshot capture, and flexible LLM
+back-end configuration via LiteLLM.
+
+== 3. Goals & Success Metrics
+
+[width="100%",cols="28%,72%",options="header",]
+|===
+|Goal |Success Metric
+|Allow engineers to issue free-form natural-language commands and watch
+the browser comply |Browser visibly completes requested actions in a
+live session
+
+|Provide both interactive chat and batch execution modes
+|`pb-agent chat` & `pb-agent batch` commands run without error
+
+|Support multiple LLM providers via LiteLLM |Agent works when
+corresponding `<PROVIDER>_API_KEY` is present in `.env`
+
+|Optional recording of PNG screenshots per step |`--record` flag
+produces timestamped PNGs in `artifacts/`
+|===
+
+== 4. Assumptions & Constraints
+
+* Python 3.13 is available.
+* Dependency management uses `uv` (`uv venv`, `uv add …`).
+* Playwright-MCP server is auto-launched by LangChain tooling (no manual
+Node command).
+* LLM credentials are supplied via `.env` using LiteLLM conventions
+(e.g. `OPENAI_API_KEY`).
+* Default browser mode is *non-headless*; `--headless` flag switches to
+headless.
+* Network access is unrestricted (no proxy requirements).
+* Metrics beyond ``it visibly works'' are out-of-scope.
+
+== 5. User Stories / Use-Cases
+
+[arabic]
+. *Interactive Engineer*
+* As an engineer, I want to run `pb-agent chat` and type natural
+instructions so that I can watch the browser respond step-by-step in
+real time.
+. *Batch Executor*
+* As an engineer, I want to run `pb-agent batch tasks.txt` so that a
+series of instructions execute automatically without manual input.
+. *Recorder*
+* As an engineer, I need to pass `--record` to capture PNG screenshots
+for each agent step for later review.
+. *Headless Automation*
+* As an engineer, I can add `--headless` to suppress the GUI for CI
+pipelines while still capturing screenshots if `--record` is set.
+
+== 6. Functional Requirements
+
+[arabic]
+. *CLI Wrapper*
+* Provide an installable console-script `pb-agent`.
+* Sub-commands: `chat` and `batch`.
+. *Interactive Chat Mode*
+* Maintain a single browser/context for the entire conversation.
+* Exit when user types `exit` or `bye` (case-insensitive).
+. *Batch Mode*
+* Accept a plain-text file; treat each non-blank line as a user
+instruction.
+* After completion, print `Done. Press any key to exit …` and wait for
+keyboard input.
+. *Streaming Output*
+* Stream agent thoughts/actions/observations to STDOUT in real time.
+. *Screenshot Recording*
+* When `--record` is supplied, capture PNG after each agent action;
+store under `artifacts/<timestamp>/step_<N>.png`.
+. *Headless Flag*
+* `--headless` runs Playwright in headless mode.
+. *Config Loading*
+* Use `python-dotenv` to load `.env`; allow CLI flags to override key
+values.
+. *Graceful Shutdown*
+* Ensure MCP browser/context and any background processes are closed on
+exit.
+. *Error Handling*
+* Implement retries/timeouts for browser actions; log failures clearly.
+
+== 7. Non-functional Requirements
+
+* *Performance:* Command latency acceptable for demo (< 5 s for typical
+navigation).
+* *Reliability:* Browser context persists across multiple instructions;
+recoverable on minor failures.
+* *Security:* Do not expose API keys in logs; avoid arbitrary code
+execution from LLM (rely on MCP action set).
+* *Portability:* Works on macOS, Linux, Windows WSL given Python 3.13
+and Node runtime for MCP (handled by Playwright install script).
+* *Usability:* Minimal flags; understandable console output.
+
+== 8. Solution Architecture / High-Level Design
+
+[mermaid]
+----
+graph LR
+  CLI["Engineer CLI<br/>(Typer / argparse in cli.py)"] --> Agent["LangChain Agent<br/>(agent.py)<br/>• Chat model via LiteLLM<br/>• Tool: Playwright-MCP"]
+  Agent --> Node["@playwright/mcp Node Server<br/>(spawned automatically)"]
+  Node --> Browser["Chromium / Firefox / WebKit"]
+----
+
+== 9. Milestones & Timeline (T-shirt sizing)
+
+[cols=",,",options="header",]
+|===
+|Milestone |Owner |Est. Effort
+|Project scaffold (`uv` env, packaging) |Dev |0.5 day
+|CLI skeleton with Typer & flags |Dev |1 day
+|LangChain agent w/ LiteLLM config |Dev |1 day
+|Integrate Playwright-MCP tool |Dev |1.5 days
+|Interactive chat flow |Dev |1 day
+|Batch execution flow |Dev |0.5 day
+|Screenshot recording |Dev |0.5 day
+|Testing & docs |Dev |1 day
+|Demo / polish buffer |Dev |0.5 day
+|===
+
+_Total: ~7 work-days (1.5 weeks)_
+
+== 10. Acceptance Criteria
+
+* `pip install -e . && pb-agent chat` launches interactive session.
+* Browser is visible by default; `--headless` hides UI.
+* Entering `open https://example.com` (or similar) navigates correctly.
+* Typing `exit` ends the session gracefully.
+* `pb-agent batch samples/flow.txt --record` processes all lines, writes
+PNGs, waits for key-press.
+* Works with at least *two* LLM providers by changing `.env` keys.
+
+== 11. Open Questions & Future Work
+
+* Enhance security by adding function-calling schemas / output
+validation.
+* Support Playwright trace ZIPs for deeper debugging.
+* Add web-based UI wrapper (Streamlit) for non-CLI users.
+* Multi-agent orchestration (CrewAI, AutoGen) for complex tasks.

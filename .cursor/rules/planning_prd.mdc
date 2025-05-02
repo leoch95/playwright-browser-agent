@@ -1,0 +1,79 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Planning & Brainstorming Towards a Comprehensive PRD
+
+This rule describes the structured process the AI assistant should follow when a user requests an in-depth planning or brainstorming session that must ultimately result in a Product Requirement Document (PRD).
+
+---
+
+## 1. Goals of the Process
+1. Thoroughly understand the user's initiative, vision and constraints.
+2. Brainstorm, evaluate and converge on the best solution strategy.
+3. Produce a clear, comprehensive **PRD.adoc** file that can be used by designers, engineers and stakeholders.
+
+---
+
+## 2. High-Level Workflow
+1. **Initiate Discovery**
+   - Prompt the user for high-level objectives, target audience, constraints and success metrics.
+   - If relevant, inspect the existing codebase using the available tools (`list_dir`, `codebase_search`, `read_file`, etc.).
+2. **Iterative Clarification & Research**
+   - Ask *one focused question at a time* to remove ambiguity.
+   - Leverage code exploration tools or web research to fill knowledge gaps.
+   - Continually summarise confirmed knowledge so the user can correct misunderstandings early.
+3. **Solution Ideation & Evaluation**
+   - Generate multiple candidate approaches.
+   - Compare them against user-defined criteria (feasibility, effort, UX, performance, etc.).
+   - Engage the user to select or refine the preferred approach.
+4. **Draft Proposal**
+   - Present a structured proposal outlining the chosen solution, rationale and open questions.
+   - Explicitly ask for the user's approval or further changes.
+5. **Finalize PRD**
+   - When the user approves the proposal, create **`PRD.adoc`** in the workspace root containing, at minimum:
+     1. Title & Version
+     2. Overview / Purpose
+     3. Goals & Success Metrics
+     4. Assumptions & Constraints
+     5. User Stories / Use-cases
+     6. Functional Requirements
+     7. Non-functional Requirements
+     8. Solution Architecture / High-level Design
+     9. Milestones & Timeline
+     10. Acceptance Criteria
+     11. Open Questions & Future Work
+   - Commit the file via `edit_file` (in AsciiDoc format).
+
+---
+
+## 3. Interaction Guidelines
+- Always confirm assumptions with the user.
+- Break complex topics into smaller questions.
+- Keep the user engaged: after each answer, ask the next most important clarifying question.
+- Use the codebase tools freely, but only modify markdown (*.md) or AsciiDoc (*.adoc) files during this planning phase.
+- Once the PRD is delivered, return to normal task flow unless the user requests further planning.
+
+---
+
+## 4. Tool Usage Cheat-Sheet
+| Need | Recommended Tool |
+|------|------------------|
+| See project structure | `list_dir` |
+| Find concepts in code | `codebase_search` |
+| Inspect file contents | `read_file` |
+| Find exact string | `grep_search` |
+| Run local script / gather runtime info | `run_terminal_cmd` *(with approval)* |
+| Search the web | `web_search` |
+| Add / update documentation | `edit_file` |
+
+
+---
+
+## 5. Exit Criteria
+The planning session concludes when:
+1. The user explicitly approves the drafted proposal.
+2. The **`PRD.adoc`** has been generated and saved in the repository.
+
+The assistant should then summarise next steps or await further instructions.

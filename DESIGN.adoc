@@ -1,0 +1,174 @@
+= Playwright Browser Agent System Design
+:toc:
+:toc-placement!:
+
+== Overview
+This document captures the end-to-end system design for the Playwright Browser Agent CLI demo. It maps each requirement from the PRD to modules and flows that a junior developer can implement.
+
+== Tech Stack
+
+- Python 3.13
+- Typer (CLI framework)
+- LangChain (agent orchestration)
+- LiteLLM (LLM provider abstraction)
+- Playwright-MCP (browser automation via Node subprocess)
+- python-dotenv (env config)
+- Poetry (packaging, via pyproject.toml)
+- Optionally: Streamlit (future web UI), CrewAI/AutoGen (future multi-agent)
+- OS: macOS, Linux, Windows WSL (with Python 3.13 and Node.js for MCP)
+
+== 1. Project Layout
+[source,text]
+----
+playwright-browser-agent/
+├── main.py           # Typer entrypoint
+├── cli.py            # Defines `chat` & `batch` commands and flags
+├── config.py         # Loads .env, merges JSON, applies CLI overrides
+├── agent.py          # Builds LangChain<>LiteLLM<>Playwright-MCP pipeline
+├── prompts.py        # System-prompt templates
+├── utils.py          # Helpers: timestamp, keypress, shutdown
+└── pyproject.toml    # Dependencies + console_scripts pb-agent
+----
+
+== 2. Config Flow (config.py)
+
+Load and merge configuration in the following precedence:
+
+[source,python]
+----
+# 1. Load environment variables via python-dotenv
+# 2. If --model-config JSON is provided: parse and merge into defaults
+# 3. Override with explicit CLI flags: provider, model, headless, record
+# 4. Fail fast if chosen PROVIDER_API_KEY is missing
+----
+
+== 3. CLI Definition (cli.py)
+
+Use Typer to expose two commands: `chat` and `batch`.
+
+=== chat
+[source,python]
+----
+@app.command()
+def chat(
+  provider: str = Option(...),
+  model: str = Option("gpt-3.5-turbo"),
+  model_config: Path = Option(None),
+  headless: bool = Option(False),
+  record: bool = Option(False),
+):
+    cfg = config.load(provider, model, model_config, headless, record)
+    agent.Agent(cfg).run_chat_loop()
+----
+
+=== batch
+[source,python]
+----
+@app.command()
+def batch(
+  file: Path,
+  provider: str = Option(...),  # same flags as chat
+  model: str = Option(...),
+  headless: bool = Option(False),
+  record: bool = Option(False),
+):
+    cfg = config.load(...)
+    lines = [l for l in file.read_text().splitlines() if l.strip()]
+    a = agent.Agent(cfg)
+    for u in lines:
+        a.send(u)
+    utils.wait_for_keypress()
+----
+
+== 4. Agent Core (agent.py)
+
+Instantiate a streaming chat agent wired to the Playwright-MCP tool.
+
+[source,python]
+----
+class Agent:
+    def __init__(self, cfg):
+        llm = LiteLLM(provider=cfg.provider, model=cfg.model, **cfg.model_params, streaming=True)
+        mcp_tool = PlaywrightMCP(headless=cfg.headless)
+        prompt = prompts.build(cfg.record)
+        self.chain = ChatAgent(llm, tools=[mcp_tool], system_prompt=prompt)
+
+    def run_chat_loop(self):
+        while True:
+            u = input(">>> ")
+            if u.lower() in ("exit","bye"): break
+            for token in self.chain.stream(u): print(token, end="")
+            print()
+
+    def send(self, user_str):
+        for token in self.chain.stream(user_str): print(token, end="")
+        print()
+----
+
+== 5. System Prompt Templates (prompts.py)
+
+Encapsulate LLM instructions; include screenshot hint only if `--record` is set.
+
+[source,python]
+----
+def build(do_screenshots: bool) -> str:
+    base = """
+You are a browser-automation agent.
+Use the `playwright_mcp` tool to carry out user instructions one at a time.
+Return only the action result or observation for each step.
+"""
+    if do_screenshots:
+        base += """
+After every successful action, call `playwright_mcp.screenshot(path=\"auto\")` to capture a PNG.
+"""
+    return base.strip()
+----
+
+== 6. Packaging & Entry Point
+
+- Add in `pyproject.toml`:
+
+[source,toml]
+----
+[tool.poetry.scripts]
+pb-agent = "main:app"
+----
+
+- `main.py` simply invokes Typer:
+
+[source,python]
+----
+from cli import app
+
+if __name__ == "__main__":
+    app()
+----
+
+== 7. Lifecycle & Shutdown Helpers (utils.py)
+
+- Register SIGINT/SIGTERM handler to gracefully stop the MCP server (spawned by the Playwright tool).
+- Implement `wait_for_keypress()` for batch completion.
+
+[source,python]
+----
+import signal
+
+def wait_for_keypress():
+    # cross-platform getch or input
+    input("Done. Press any key to exit …")
+
+def register_shutdown(handler):
+    signal.signal(signal.SIGINT, handler)
+    signal.signal(signal.SIGTERM, handler)
+----
+
+== 8. Flow Summary
+
+1. **Startup**: `main` → `cli` → `config` → instantiate `Agent`
+2. **Interactive**: prompt user → chain.stream → Playwright-MCP tool → print tokens
+3. **Batch**: read lines → for each line call `send` → stream output live → keypress end
+4. **Shutdown**: on exit or signal, kill MCP server & exit
+
+--
+
+All PRD requirements are covered in discrete modules. Junior devs can follow each file stub and fill in details using the provided code snippets.

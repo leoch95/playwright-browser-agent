@@ -1,0 +1,47 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Implementation Workflow
+
+This rule guides the systematic implementation of the Playwright Browser Agent according to [TASKS.adoc](mdc:TASKS.adoc).
+
+## Implementation Process
+
+1. **Follow tasks in order** - Implement tasks from [TASKS.adoc](mdc:TASKS.adoc) sequentially, following the task grouping structure
+2. **Cross-reference documentation** - Always refer to [PRD.adoc](mdc:PRD.adoc) for product requirements and [DESIGN.adoc](mdc:DESIGN.adoc) for technical implementation details
+3. **Update task status** - Mark tasks as complete using the status legend from [TASKS.adoc](mdc:TASKS.adoc):
+   * `▢` → `✅` = Completed task
+   * `▢` → `❌` = Failed task
+   * `▢` → `❓` = Needs clarification
+
+## Implementation Checklist
+
+For each task:
+
+1. **Identify the task** - Select the next pending `▢` task from [TASKS.adoc](mdc:TASKS.adoc)
+2. **Research requirements** - Find relevant details in [PRD.adoc](mdc:PRD.adoc) and [DESIGN.adoc](mdc:DESIGN.adoc)
+3. **Implement solution** - Follow the design patterns and code snippets in [DESIGN.adoc](mdc:DESIGN.adoc)
+4. **Update task status** - Change `▢` to the appropriate status (✅/❌/❓) in [TASKS.adoc](mdc:TASKS.adoc)
+5. **Request review** - Before moving to the next task, ask the user to review/approve
+
+## Implementation Priority
+
+Follow the exact grouping and sequence in [TASKS.adoc](mdc:TASKS.adoc):
+
+1. Project Setup
+2. Configuration Module (config.py)
+3. CLI Interface (cli.py)
+4. Agent Core (agent.py)
+5. Prompts System (prompts.py)
+6. Utility Functions (utils.py)
+7. Testing
+8. Documentation
+9. Integration & Polish
+
+## Code Standards
+
+- Follow Python best practices as outlined in the tech-stack rule
+- Maintain consistent style with code examples in [DESIGN.adoc](mdc:DESIGN.adoc)
+- Ensure each module matches its specified responsibilities
