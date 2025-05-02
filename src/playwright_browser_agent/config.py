@@ -5,8 +5,7 @@ import sys
 from typing import Optional
 
 from dotenv import load_dotenv
-from litellm import exceptions as litellm_exceptions
-from litellm import validate_environment
+from litellm.utils import validate_environment
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Load environment variables from .env file first
@@ -62,16 +61,24 @@ def load_config(**cli_overrides) -> Settings:
     # Use LiteLLM's validator
     model_identifier = f"{settings.llm_provider}/{settings.llm_model}"
     try:
-        # This function prints errors and potentially raises exceptions if validation fails
-        validate_environment(model_identifier)
-        print(f"LiteLLM environment validation successful for model: {model_identifier}")
-    except litellm_exceptions.MissingEnvironmentVariableError as e:
-        # validate_environment might also print its own errors, but we catch to ensure exit
-        print(f"Error: Missing environment variables for model '{model_identifier}': {e}", file=sys.stderr)
-        sys.exit(1)
+        # This function returns a dictionary with validation results.
+        validation_result = validate_environment(model_identifier)
+
+        # Primarily check if specific missing keys were identified.
+        missing_keys = validation_result.get("missing_keys", [])
+        if missing_keys:
+            print(f"Error: Missing required environment variables for model '{model_identifier}': {', '.join(missing_keys)}", file=sys.stderr)
+            sys.exit(1)
+
+        # Optionally, log if keys_in_environment is False but no specific keys were listed (might indicate partial check or bug)
+        if not validation_result.get("keys_in_environment"):
+             print(f"Warning: LiteLLM reported keys_in_environment=False for '{model_identifier}', but didn't list specific missing keys. Proceeding, but the actual API call might fail.")
+        else:
+            print(f"LiteLLM environment validation successful for model: {model_identifier}")
+
     except Exception as e:
-        # Catch other potential errors during validation
-        print(f"Error during environment validation for model '{model_identifier}': {e}", file=sys.stderr)
+        # Catch other potential errors during validation (e.g., network issues if it tries connection)
+        print(f"Error during environment validation attempt for model '{model_identifier}': {e}", file=sys.stderr)
         sys.exit(1)
 
     return settings

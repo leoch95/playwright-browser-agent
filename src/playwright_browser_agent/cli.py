@@ -1,5 +1,6 @@
 """Command-line interface for the Playwright Browser Agent."""
 
+import sys
 from typing import Optional
 
 import typer
