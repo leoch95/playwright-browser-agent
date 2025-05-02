@@ -33,7 +33,7 @@ toc::[]
 * ✅ Set up Typer application framework
 * ✅ Implement 'chat' command with required options
 * ✅ Implement 'batch' command with file input
-* [square]#▢# Add help documentation for all commands
+* ✅ Add help documentation for all commands
 
 == Agent Core (agent.py)
 
