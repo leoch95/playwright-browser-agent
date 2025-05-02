@@ -22,3 +22,13 @@ dependencies = [
 
 [project.scripts]
 pb-agent = "playwright_browser_agent.cli:app"
+
+[project.optional-dependencies]
+# Add pytest and pytest-asyncio for testing
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+]
+
+[tool.uv.sources]
+playwright-browser-agent = { path = ".", editable = true }
