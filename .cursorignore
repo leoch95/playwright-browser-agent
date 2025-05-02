@@ -17,3 +17,10 @@ artifacts/
 
 # Lock file
 uv.lock
+
+# IDE settings & caches
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
