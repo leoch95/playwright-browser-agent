@@ -46,9 +46,9 @@ toc::[]
 
 == Prompts System (prompts.py)
 
-* [square]#▢# Create base system prompt
-* [square]#▢# Add conditional screenshot instructions
-* [square]#▢# Optimize prompts for browser automation tasks
+* ✅ Create base system prompt
+* ✅ Add conditional screenshot instructions
+* ✅ Optimize prompts for browser automation tasks
 
 == Utility Functions (utils.py)
 
