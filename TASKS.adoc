@@ -25,7 +25,7 @@ toc::[]
 
 * ✅ Implement dotenv loading
 * ✅ Create config merging logic for multiple sources
-* [square]#▢# Add validation for required API keys
+* ✅ Add validation for required API keys
 * [square]#▢# Implement config object structure
 
 == CLI Interface (cli.py)
