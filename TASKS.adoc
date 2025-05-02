@@ -52,10 +52,10 @@ toc::[]
 
 == Utility Functions (utils.py)
 
-* [square]#▢# Create timestamp generation for artifacts
-* [square]#▢# Implement cross-platform keypress detection
-* [square]#▢# Add signal handlers for graceful shutdown
-* [square]#▢# Create screenshot directory management
+* ✅ Create timestamp generation for artifacts
+* ✅ Implement cross-platform keypress detection
+* ✅ Add signal handlers for graceful shutdown
+* ✅ Create screenshot directory management
 
 == Testing
 
