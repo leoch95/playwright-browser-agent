@@ -1,11 +1,15 @@
 """Manages system prompts for the Playwright Browser Agent."""
 
-print("prompts.py loaded")
+import sys
+
+print("prompts.py loaded", file=sys.stderr) # Print to stderr to avoid polluting stdout
 
 # Base system prompt template
 BASE_SYSTEM_PROMPT_TEMPLATE = """
 You are a web browsing agent that uses Playwright tools to interact with web pages based on user requests.
 You operate in **{mode} Mode** {headless_status_detail}.
+
+**IMPORTANT RULE:** Base ALL your responses and actions *strictly* on the information currently visible in the browser, as provided by the tools (especially `browser_snapshot`). Do NOT rely on prior knowledge or external information.
 
 You have access to a Playwright Model Context Protocol (MCP) server providing the following tools:
 {tools_description}
@@ -62,7 +66,7 @@ IMPORTANT: After each browser action (like navigate, click, type, select), you M
 """
 
 def build_system_prompt(mode: str = "snapshot", headless: bool = False, record_screenshots: bool = False) -> str:
-    """Builds the final system prompt based on mode, headless status, and screenshot recording."""
+    """Builds the final system prompt string based on mode, headless status, and screenshot recording."""
     mode_capitalized = mode.capitalize()
     headless_status = "Enabled" if headless else "Disabled"
     headless_status_detail = f"(running {'headlessly' if headless else 'with a visible browser window'})"
@@ -89,11 +93,13 @@ def build_system_prompt(mode: str = "snapshot", headless: bool = False, record_s
     # TODO: Add prompt optimization techniques if needed
     # e.g., adding specific examples, refining instructions based on model behavior
 
+    # Return as a string
     return prompt.strip()
 
 # Example usage (for testing)
 if __name__ == "__main__":
     print("--- Prompt (Snapshot, Headful) ---")
+    # Example now prints the final string
     print(build_system_prompt())
     print("\n" + "="*40 + "\n")
     print("--- Prompt (Snapshot, Headful, Recording) ---")
