@@ -94,36 +94,63 @@ async def run_agent_chat_session(config: Settings):
         await run_chat_loop(agent_executor, initial_prompt=system_prompt)
 
 async def run_chat_loop(agent_executor: Any, initial_prompt: Optional[str] = None):
-    """Runs the interactive chat loop using the agent's stream method."""
+    """Runs the interactive chat loop using the agent's stream_events method."""
     messages = []
     if initial_prompt:
         messages.append(SystemMessage(content=initial_prompt))
-        print(f"System: {initial_prompt}")
+        print(f"\n🌐 System: {initial_prompt}")
 
     while True:
-        user_input = input("User: ")
+        user_input = input("\n💁 User: ")
         if user_input.lower() in ["exit", "bye"]:
-            print("Exiting chat.")
+            print("\n🌐 System: Goodbye! 👋")
             break
 
         messages.append(HumanMessage(content=user_input))
 
-        # 4. Use agent's stream method
-        async for chunk in agent_executor.astream({"messages": messages}):
+        # 4. Use agent's stream_events method
+        print("\n🤖 Agent: ", end="", flush=True)
+        current_ai_response = "" # Accumulate AI response here
+        async for chunk in agent_executor.astream_events({"messages": messages}, version="v2"):
             # TODO: Implement proper handling of streaming output chunks
             # Chunks can contain agent actions, tool outputs, final answers etc.
             # Need to parse and display appropriately.
-            print(chunk, flush=True) # Basic printing for now
+            # print(chunk, flush=True) # Basic printing for now - REMOVED
+
+            # Enhanced printing based on chunk type (example structure)
+            event = chunk.get("event")
+            data = chunk.get("data", {})
+            name = chunk.get("name") # Tool name or agent name
+
+            if event == "on_chat_model_stream":
+                # Check if it's AIMessage content and the chunk key exists
+                chunk_content = data.get("chunk")
+                if chunk_content and hasattr(chunk_content, 'content') and chunk_content.content:
+                    print(chunk_content.content, end="", flush=True)
+                    current_ai_response += chunk_content.content # Append to accumulator
+            elif event == "on_tool_start" and name:
+                print(f"Calling tool [{name}]...", end="", flush=True) # Removed leading \n
+            elif event == "on_tool_end" and name:
+                # Assuming success if event fires. Check data for actual result if available.
+                # result_str = data.get("output", "result unknown") # Example if output is in data
+                print(" success", flush=True) # Append success status
+                # TODO: If tool failed, print " failed" and maybe the error
+
 
             # TODO: Update messages list with the AI's final response for history
             # For ReAct, the final response is usually in the 'output' key of the last chunk
-            if "output" in chunk:
-                 messages.append(AIMessage(content=chunk["output"]))
+            # if "output" in data: # Assuming final output is in data key for final event
+            #      messages.append(AIMessage(content=data["output"])) # Incorrectly appending here
+        print() # Add a newline after the full response
+
+        # Append the full AI response to messages *after* the stream is finished
+        if current_ai_response:
+            messages.append(AIMessage(content=current_ai_response))
 
 async def run_agent_batch_session(config: Settings, instructions: List[str]):
     """Initializes the agent and runs instructions from a list in batch mode."""
     llm, mcp_config, system_prompt = _setup_agent_resources(config)
-    print(f"System: {system_prompt}") # Print system prompt once
+    print(f"\n🌐 System: {system_prompt}")
 
     # Initialize PlaywrightMCPTool via MultiServerMCPClient
     async with MultiServerMCPClient(connections=mcp_config) as client: # type: ignore
@@ -136,21 +163,45 @@ async def run_agent_batch_session(config: Settings, instructions: List[str]):
         messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
         for i, instruction in enumerate(instructions):
             print(f"\n--- Instruction {i+1}/{len(instructions)} ---")
-            print(f"User: {instruction}")
-            print("Agent:")
+            print(f"\n💁 User: {instruction}")
+            # print("Agent:") # Removed, adding before loop
 
             messages.append(HumanMessage(content=instruction))
 
-            current_step_output = ""
+            current_step_output = "" # Reset accumulator for each instruction
             try:
-                # Stream the agent's response for the current instruction
-                async for chunk in agent_executor.astream({"messages": messages}):
+                # Stream the agent's response for the current instruction using astream_events
+                print("\n🤖 Agent: ", end="", flush=True)
+                async for chunk in agent_executor.astream_events({"messages": messages}, version="v2"):
                     # Print intermediate steps/thoughts/tool calls/outputs
                     # Adjust printing based on the actual structure of the chunk
-                    print(chunk, flush=True)
+                    # print(chunk, flush=True) # REMOVED
+
+                    # Enhanced printing based on chunk type (example structure)
+                    event = chunk.get("event")
+                    data = chunk.get("data", {})
+                    name = chunk.get("name") # Tool name or agent name
+
+                    if event == "on_chat_model_stream":
+                        # Check if it's AIMessage content and the chunk key exists
+                        chunk_content = data.get("chunk")
+                        if chunk_content and hasattr(chunk_content, 'content') and chunk_content.content:
+                            print(chunk_content.content, end="", flush=True)
+                            current_step_output += chunk_content.content # Append to accumulator
+                    elif event == "on_tool_start" and name:
+                        print(f"Calling tool [{name}]...", end="", flush=True) # Removed leading \n
+                    elif event == "on_tool_end" and name:
+                        # Assuming success if event fires. Check data for actual result if available.
+                        # result_str = data.get("output", "result unknown") # Example if output is in data
+                        print(" success", flush=True) # Append success status
+                        # TODO: If tool failed, print " failed" and maybe the error
+
+
                     # Accumulate the final answer if needed (depends on ReAct structure)
-                    if "output" in chunk:
-                        current_step_output = chunk["output"]
+                    if "output" in data: # Assuming final output is in data key for final event
+                        current_step_output = data["output"]
+
+                print() # Add a newline after the full response for the step
 
                 # Append the final AI message from this step to maintain context for the next step
                 if current_step_output:
