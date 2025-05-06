@@ -61,7 +61,7 @@ toc::[]
 
 * ✅ Set up testing environment (pytest, placeholders)
 * [square]#✅# Test interactive chat mode
-* [square]#▢# Test batch processing
+* [square]#✅# Test batch processing
 * [square]#▢# Verify screenshot recording
 * [square]#▢# Test headless mode
 * [square]#▢# Verify multiple LLM providers
