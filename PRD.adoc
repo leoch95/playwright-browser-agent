@@ -43,9 +43,9 @@ produces timestamped PNGs in `artifacts/`
 * Playwright-MCP server is auto-launched by LangGraph tooling (no manual
 Node command).
 * LLM credentials are supplied via `.env` using LiteLLM conventions
-(e.g. `OPENAI_API_KEY`).
-* Default browser mode is *non-headless*; `--headless` flag switches to
-headless.
+(e.g. `OPENAI_API_KEY`).
+* Default interaction mode is `snapshot` (accessibility tree); `--mode headless`
+  runs without GUI, `--mode vision` uses screenshot-based interaction.
 * Network access is unrestricted (no proxy requirements).
 * Metrics beyond ``it visibly works'' are out-of-scope.
 
@@ -63,8 +63,11 @@ series of instructions execute automatically without manual input.
 * As an engineer, I need to pass `--record` to capture PNG screenshots
 for each agent step for later review.
 . *Headless Automation*
-* As an engineer, I can add `--headless` to suppress the GUI for CI
-pipelines while still capturing screenshots if `--record` is set.
+* As an engineer, I can specify `--mode headless` to suppress the GUI for CI
+  pipelines while still capturing screenshots if `--record` is set.
+. *Vision Mode Interaction* (Optional/Implied by mode flag)
+* As an engineer, I can specify `--mode vision` to use screenshot-based
+  visual interaction if needed (e.g., for models requiring visual input).
 
 == 6. Functional Requirements
 
@@ -86,7 +89,13 @@ keyboard input.
 * When `--record` is supplied, capture PNG after each agent action;
 store under `artifacts/<timestamp>/step_<N>.png`.
 . *Headless Flag*
-* `--headless` runs Playwright in headless mode.
+* `--mode headless` hides the browser UI.
+. *Interaction Mode Flag*
+* `--mode <mode>` controls the Playwright MCP interaction mode.
+* Supported modes: `snapshot` (default, accessibility tree), `headless` (no GUI),
+  `vision` (screenshot-based).
+* The CLI should pass the appropriate flags (`--headless` or `--vision`)
+  to the underlying MCP server based on the selected mode.
 . *Config Loading*
 * Use `python-dotenv` to load `.env`; allow CLI flags to override key
 values.
@@ -139,7 +148,8 @@ _Total: ~7 work-days (1.5 weeks)_
 == 10. Acceptance Criteria
 
 * `pip install -e . && pb-agent chat` launches interactive session.
-* Browser is visible by default; `--headless` hides UI.
+* Browser is visible by default (`--mode snapshot`).
+* `--mode headless` hides the browser UI.
 * Entering `open https://example.com` (or similar) navigates correctly.
 * Typing `exit` ends the session gracefully.
 * `pb-agent batch samples/flow.txt --record` processes all lines, writes

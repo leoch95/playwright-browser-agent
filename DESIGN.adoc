@@ -39,7 +39,7 @@ Load and merge configuration in the following precedence:
 ----
 # 1. Load environment variables via python-dotenv
 # 2. If --model-config JSON is provided: parse and merge into defaults
-# 3. Override with explicit CLI flags: provider, model, headless, record
+# 3. Override with explicit CLI flags: provider, model, mode, record
 # 4. Fail fast if chosen PROVIDER_API_KEY is missing
 ----
 
@@ -54,12 +54,11 @@ Use Typer to expose two commands: `chat` and `batch`.
 def chat(
   provider: str = Option(...),
   model: str = Option("gpt-3.5-turbo"),
-  model_config: Path = Option(None),
-  headless: bool = Option(False),
+  mode: MCPMode = Option(MCPMode.snapshot, help="Interaction mode: snapshot, headless, vision"),
   record: bool = Option(False),
 ):
-    cfg = config.load(provider, model, model_config, headless, record)
-    agent.Agent(cfg).run_chat_loop()
+    cfg = config.load(provider=provider, model=model, mode=mode.value, record=record)
+    asyncio.run(agent.run_agent_chat_session(cfg))
 ----
 
 === batch
@@ -70,14 +69,12 @@ def batch(
   file: Path,
   provider: str = Option(...),  # same flags as chat
   model: str = Option(...),
-  headless: bool = Option(False),
+  mode: MCPMode = Option(MCPMode.snapshot, help="Interaction mode: snapshot, headless, vision"),
   record: bool = Option(False),
 ):
-    cfg = config.load(...)
+    cfg = config.load(provider=provider, model=model, mode=mode.value, record=record)
     lines = [l for l in file.read_text().splitlines() if l.strip()]
-    a = agent.Agent(cfg)
-    for u in lines:
-        a.send(u)
+    asyncio.run(agent.run_agent_batch_session(cfg, lines))
     utils.wait_for_keypress()
 ----
 
@@ -109,7 +106,13 @@ class Agent:
         # For the design, we represent getting tools conceptually:
         # mcp_client = MultiServerMCPClient(cfg.mcp_server_config)
         # tools = mcp_client.get_tools() # Conceptual - actual call is async
-        tools = self._load_mcp_tools_sync() # Placeholder for sync representation
+
+        # MCP server config now depends on cfg.mode (passed to _setup_agent_resources internally)
+        # The actual setup happens within _setup_agent_resources called by run_..._session
+        llm, mcp_config, system_prompt = _setup_agent_resources(cfg)
+
+        # Tools are loaded async within the run methods, simplified here
+        tools = ["PlaceholderTool"] # Placeholder for conceptual design
 
         # 3. Prepare system message/prompt
         system_message = prompts.build(self.cfg.record)
@@ -123,22 +126,16 @@ class Agent:
 
     def _load_mcp_tools_sync(self):
         # Placeholder: In reality, this involves async setup and client.get_tools()
+        # MCP configuration (like headless/vision) is now handled in _setup_agent_resources
+        # based on self.cfg.mode, not directly here.
         # For the design doc, we just indicate that tools are loaded.
         # Example tool (replace with actual loaded tool)
-        from langchain_mcp_adapters.tools import PlaywrightMCPTool
-        return [PlaywrightMCPTool(headless=self.cfg.headless)]
+        from langchain_mcp_adapters.tools import PlaywrightMCPTool # Example
+        # The tool itself doesn't usually take headless directly, the server connection does
+        return [PlaywrightMCPTool()] # Simplified representation
 
     def run_chat_loop(self):
-        # Simplified loop using the LangGraph agent
-        print("Starting chat loop (simplified). Use 'exit' or 'bye' to quit.")
-        while True:
-            user_input = input(">>> ")
-            if user_input.lower() in ("exit", "bye"): break
-            # Actual invocation would be async: await self.graph.ainvoke(...)
-            response = self.graph.invoke({"messages": [("user", user_input)]})
-            # Extract final message (simplified)
-            final_message = response.get("messages", [])[-1]
-            print(f"RESPONSE: {getattr(final_message, 'content', '...')}")
+        # This method is replaced by run_agent_chat_session in the actual agent.py
 
     def send(self, user_str):
         # Simplified send using the LangGraph agent
