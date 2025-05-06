@@ -31,6 +31,7 @@ class Settings(BaseSettings):
 
     # Browser settings
     mode: str = "snapshot"
+    headless: bool = False
 
     # Recording settings
     record: bool = False
@@ -50,6 +51,11 @@ def load_config(**cli_overrides) -> Settings:
     print(f"Loaded configuration (pre-validation): {settings.model_dump()}") # Basic logging
 
     # --- Validation --- #
+    # Validate mode
+    if settings.mode not in ["snapshot", "vision"]:
+        print(f"Error: Invalid mode '{settings.mode}'. Must be 'snapshot' or 'vision'.", file=sys.stderr)
+        sys.exit(1)
+
     # Ensure provider and model are specified
     if not settings.llm_provider:
         print("Error: LLM provider must be specified via --llm-provider flag or LLM_PROVIDER env var.", file=sys.stderr)
@@ -91,6 +97,7 @@ if __name__ == "__main__":
     print(f"LLM Provider: {config.llm_provider}")
     print(f"LLM Model: {config.llm_model}")
     print(f"Mode: {config.mode}")
+    print(f"Headless: {config.headless}")
     print(f"Record: {config.record}")
     print(f"Artifacts Dir: {config.artifacts_dir}")
     # API keys are read from env, not stored in config object
