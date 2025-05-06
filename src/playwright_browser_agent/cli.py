@@ -6,9 +6,11 @@ from typing import Optional
 
 import typer
 
-from .agent import run_agent_chat_session  # Updated import
+from .agent import run_agent_batch_session  # Updated import
+from .agent import run_agent_chat_session
 # Import config loading and agent logic (agent.py will be created later)
 from .config import load_config
+from .utils import wait_for_keypress  # Import wait function
 
 # from .agent import run_chat_loop # Placeholder for agent import
 
@@ -143,19 +145,29 @@ def batch(
     # Placeholder: Read file and call agent's batch processing function
     try:
         with open(file, 'r') as f:
-            instructions = [line.strip() for line in f if line.strip()]
+            # Read non-empty lines, skipping those starting with '#'
+            instructions = [line.strip() for line in f if line.strip() and not line.strip().startswith('#')]
         print(f"Read {len(instructions)} instructions from {file}.")
         # Placeholder for batch processing logic
-        print("\n>>> Placeholder: Agent batch processing would run here <<<")
-        # run_batch_processing(config, instructions)
+        # print("\n>>> Placeholder: Agent batch processing would run here <<<") # Remove this line
+        # run_batch_processing(config, instructions) # Remove this line
+
+        # Run the agent's batch processing
+        try:
+            asyncio.run(run_agent_batch_session(config, instructions))
+        except KeyboardInterrupt:
+            print("\nBatch processing interrupted by user. Exiting.")
+        except Exception as e:
+            print(f"\nAn error occurred during batch processing: {e}", file=sys.stderr)
+            raise typer.Exit(code=1)
+
+        # Wait for user keypress after successful batch completion
+        print("\nBatch processing finished.")
+        wait_for_keypress()
+
     except FileNotFoundError:
         print(f"Error: Batch file not found at {file}", file=sys.stderr)
         raise typer.Exit(code=1)
-    except Exception as e:
-        print(f"\nError during batch processing: {e}", file=sys.stderr)
-        raise typer.Exit(code=1)
-
-    print("Batch processing finished.")
 
 if __name__ == "__main__":
     # This allows running the CLI directly via `python -m src.playwright_browser_agent.cli` for testing

@@ -3,7 +3,10 @@
 import asyncio
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain.agents import \
+    AgentExecutor  # Assuming create_react_agent returns this type
+from langchain_core.messages import (AIMessage, BaseMessage, HumanMessage,
+                                     SystemMessage)
 from langchain_litellm import ChatLiteLLM
 # Define connection types for casting
 from langchain_mcp_adapters.client import (MultiServerMCPClient, SSEConnection,
@@ -14,6 +17,8 @@ from langgraph.prebuilt import create_react_agent
 # Import config type and prompt builder
 from .config import Settings
 from .prompts import build_system_prompt  # Uncomment import
+
+# from .utils import wait_for_keypress # Remove wait function import from here
 
 # from .prompts import build_system_prompt # TODO: Create this function
 
@@ -36,17 +41,16 @@ MCPConnectionsType = Dict[str, Union[StdioConnection, SSEConnection, WebsocketCo
 from langchain_mcp_adapters.client import StdioConnection
 
 
-async def run_agent_chat_session(config: Settings):
-    """Initializes the agent and runs the interactive chat loop."""
-
+def _setup_agent_resources(config: Settings) -> tuple[ChatLiteLLM, Dict[str, Any], str]:
+    """Helper to configure LLM, MCP, and system prompt."""
     # 1. Build MCP Configuration
     mcp_args = ["@playwright/mcp@latest"]
     if config.headless:
         mcp_args.append("--headless")
-        print("Configuring Playwright MCP for Headless mode.") # Added logging
+        print("Configuring Playwright MCP for Headless mode.")
     else:
-        mcp_args.append("--vision") # Default to vision mode if not headless
-        print("Configuring Playwright MCP for Vision mode (non-headless).") # Added logging
+        mcp_args.append("--vision")
+        print("Configuring Playwright MCP for Vision mode (non-headless).")
 
     mcp_config = {
         "playwright": {
@@ -56,30 +60,29 @@ async def run_agent_chat_session(config: Settings):
         }
     }
 
-    # 2. Initialize ChatLiteLLM using loaded config
-    # LiteLLM reads API keys directly from environment variables based on the provider/model string
+    # 2. Initialize ChatLiteLLM
     llm = ChatLiteLLM(
         model_name=f"{config.llm_provider}/{config.llm_model}",
         streaming=True,
-        # Temperature, max_tokens etc. can be added if needed
     )
 
-    # 3. Initialize PlaywrightMCPTool via MultiServerMCPClient
-    # The client manages the connection(s) to MCP server(s)
-    # Cast the config to satisfy the linter, assuming internal handling is correct
+    # 3. Build System Prompt
+    system_prompt = build_system_prompt(record_screenshots=config.record)
+
+    return llm, mcp_config, system_prompt
+
+async def run_agent_chat_session(config: Settings):
+    """Initializes the agent and runs the interactive chat loop."""
+    llm, mcp_config, system_prompt = _setup_agent_resources(config)
+
+    # Initialize PlaywrightMCPTool via MultiServerMCPClient
     async with MultiServerMCPClient(connections=mcp_config) as client: # type: ignore
         tools = client.get_tools()
 
-        # 4. Build System Prompt (conditionally add recording instructions)
-        system_prompt = build_system_prompt(record_screenshots=config.record) # Use the function
-        # system_prompt = "You are a helpful assistant controlling a web browser. Describe your plan then execute actions using the available tools." # Remove fallback
-        # Optionally print the prompt for debugging
-        # print(f"--- System Prompt ---\\n{system_prompt}\\n--------------------")
-
-        # 5. Use langgraph.prebuilt.create_react_agent
+        # Use langgraph.prebuilt.create_react_agent
         agent_executor = create_react_agent(llm, tools)
 
-        # 6. Start the interactive chat loop
+        # Start the interactive chat loop
         await run_chat_loop(agent_executor, initial_prompt=system_prompt)
 
 async def run_chat_loop(agent_executor: Any, initial_prompt: Optional[str] = None):
@@ -109,19 +112,55 @@ async def run_chat_loop(agent_executor: Any, initial_prompt: Optional[str] = Non
             if "output" in chunk:
                  messages.append(AIMessage(content=chunk["output"]))
 
-async def send(agent_executor: Any, instruction: str, initial_prompt: Optional[str] = None) -> Dict[str, Any]:
-    """Sends a single instruction using the agent's invoke method."""
-    messages = []
-    if initial_prompt:
-        messages.append(SystemMessage(content=initial_prompt))
-    messages.append(HumanMessage(content=instruction))
+async def run_agent_batch_session(config: Settings, instructions: List[str]):
+    """Initializes the agent and runs instructions from a list in batch mode."""
+    llm, mcp_config, system_prompt = _setup_agent_resources(config)
+    print(f"System: {system_prompt}") # Print system prompt once
 
-    # 5. Use agent's invoke method
-    result = await agent_executor.ainvoke({"messages": messages})
+    # Initialize PlaywrightMCPTool via MultiServerMCPClient
+    async with MultiServerMCPClient(connections=mcp_config) as client: # type: ignore
+        tools = client.get_tools()
 
-    # TODO: Process and return the result appropriately
-    print(f"Agent Result: {result}")
-    return result
+        # Use langgraph.prebuilt.create_react_agent
+        agent_executor: AgentExecutor = create_react_agent(llm, tools) # type: ignore
+
+        # Process instructions one by one
+        messages: List[BaseMessage] = [SystemMessage(content=system_prompt)]
+        for i, instruction in enumerate(instructions):
+            print(f"\n--- Instruction {i+1}/{len(instructions)} ---")
+            print(f"User: {instruction}")
+            print("Agent:")
+
+            messages.append(HumanMessage(content=instruction))
+
+            current_step_output = ""
+            try:
+                # Stream the agent's response for the current instruction
+                async for chunk in agent_executor.astream({"messages": messages}):
+                    # Print intermediate steps/thoughts/tool calls/outputs
+                    # Adjust printing based on the actual structure of the chunk
+                    print(chunk, flush=True)
+                    # Accumulate the final answer if needed (depends on ReAct structure)
+                    if "output" in chunk:
+                        current_step_output = chunk["output"]
+
+                # Append the final AI message from this step to maintain context for the next step
+                if current_step_output:
+                    messages.append(AIMessage(content=current_step_output))
+                else:
+                     # If no explicit output, maybe add a placeholder or log a warning?
+                    print("Warning: Agent did not produce a final 'output' for this step.")
+                    # Decide if we need to add a placeholder AIMessage
+
+            except Exception as e:
+                print(f"\nError processing instruction {i+1}: {e}")
+                print("Skipping to next instruction...")
+                # Optionally add a system message about the error? Or just continue?
+                # messages.append(SystemMessage(content=f"Error encountered: {e}"))
+                continue # Move to the next instruction
+
+        print("\n--- Batch processing finished ---")
+        # wait_for_keypress call moved to cli.py
 
 # Example usage (for testing, will be called from cli.py)
 async def main():
