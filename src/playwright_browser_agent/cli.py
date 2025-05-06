@@ -1,10 +1,12 @@
 """Command-line interface for the Playwright Browser Agent."""
 
+import asyncio  # Need asyncio to run the agent
 import sys
 from typing import Optional
 
 import typer
 
+from .agent import run_agent_chat_session  # Updated import
 # Import config loading and agent logic (agent.py will be created later)
 from .config import load_config
 
@@ -72,12 +74,22 @@ def chat(
     print(f"Recording screenshots: {config.record}")
 
     # Placeholder: Call the agent's chat loop (to be implemented in agent.py)
-    print("\n>>> Placeholder: Agent chat loop would start here <<<\n")
+    # print("\n>>> Placeholder: Agent chat loop would start here <<<") # Remove this line
     # try:
     #     run_chat_loop(config)
     # except Exception as e:
     #     print(f"\nError during chat loop: {e}", file=sys.stderr)
     #     raise typer.Exit(code=1)
+
+    # Call the agent's chat session runner
+    try:
+        asyncio.run(run_agent_chat_session(config))
+    except KeyboardInterrupt:
+        print("\nInterrupted by user. Exiting.")
+    except Exception as e:
+        print(f"\nAn error occurred during the chat session: {e}", file=sys.stderr)
+        # Consider more specific error handling or logging traceback
+        raise typer.Exit(code=1)
 
     print("Chat session ended.")
 
@@ -134,7 +146,7 @@ def batch(
             instructions = [line.strip() for line in f if line.strip()]
         print(f"Read {len(instructions)} instructions from {file}.")
         # Placeholder for batch processing logic
-        print("\n>>> Placeholder: Agent batch processing would run here <<<\n")
+        print("\n>>> Placeholder: Agent batch processing would run here <<<")
         # run_batch_processing(config, instructions)
     except FileNotFoundError:
         print(f"Error: Batch file not found at {file}", file=sys.stderr)
