@@ -1,0 +1,16 @@
+{
+  "capabilities": [
+    "core",
+    "tabs",
+    "pdf",
+    "history",
+    "wait",
+    "files"
+  ],
+  "outputDir": "artifacts",
+  "tools": {
+    "browser_take_screenshot": {
+      "omitBase64": false
+    }
+  }
+}

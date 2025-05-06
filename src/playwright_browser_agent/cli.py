@@ -65,6 +65,11 @@ def chat(
         "--record",
         help="Record browser interactions by saving screenshots to the artifacts directory.",
     ),
+    playwright_mcp_config_path: Optional[str] = typer.Option(
+        None,
+        "--playwright-mcp-config-path",
+        help="Path to a custom Playwright MCP JSON configuration file.",
+    ),
 ):
     """Starts an interactive chat session to control the browser agent."""
     print("Starting interactive chat mode...")
@@ -79,6 +84,7 @@ def chat(
             mode=mode.value, # Pass the string value of the enum
             headless=headless, # Pass headless flag
             record=record,
+            playwright_mcp_config_path=playwright_mcp_config_path, # Pass the config path
         )
     except SystemExit:
         # Config validation failed (e.g., missing API key), error already printed
@@ -143,6 +149,11 @@ def batch(
         "--record",
         help="Record screenshots during batch processing.",
     ),
+    playwright_mcp_config_path: Optional[str] = typer.Option(
+        None,
+        "--playwright-mcp-config-path",
+        help="Path to a custom Playwright MCP JSON configuration file for batch mode.",
+    ),
 ):
     """Processes browser instructions from a file in batch mode."""
     print(f"Starting batch mode with file: {file}")
@@ -155,6 +166,7 @@ def batch(
             mode=mode.value, # Pass the string value of the enum
             headless=headless, # Pass headless flag
             record=record,
+            playwright_mcp_config_path=playwright_mcp_config_path, # Pass the config path
         )
     except SystemExit:
         raise typer.Exit(code=1)

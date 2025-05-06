@@ -2,6 +2,7 @@
 
 import asyncio
 import uuid  # Import uuid for generating thread IDs
+from pathlib import Path  # Add Path import
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 from langchain.agents import \
@@ -47,8 +48,28 @@ from .prompts import build_system_prompt  # Correct import
 
 def _setup_agent_resources(config: Settings) -> tuple[ChatLiteLLM, Dict[str, Any], str]:
     """Helper to configure LLM, MCP, and system prompt string."""
-    # 1. Build MCP Configuration
+
+    # Ensure default MCP config file exists
+    default_mcp_config_file = Path("playwright-mcp-config.json")
+    if not default_mcp_config_file.exists():
+        print(f"Default MCP config file not found. Creating '{default_mcp_config_file}' with empty JSON.")
+        try:
+            with open(default_mcp_config_file, 'w') as f:
+                f.write("{}")
+        except OSError as e:
+            print(f"Warning: Could not create default MCP config file '{default_mcp_config_file}': {e}")
+
+    # 1. Build MCP Configuration Args
     mcp_args = ["@playwright/mcp@latest"]
+
+    # Add custom config file path if provided
+    if config.playwright_mcp_config_path:
+        config_path = Path(config.playwright_mcp_config_path)
+        if config_path.is_file():
+            mcp_args.extend(["--config", str(config_path.resolve())]) # Pass absolute path
+            print(f"Using Playwright MCP config file: {config_path.resolve()}")
+        else:
+            print(f"Warning: Provided MCP config path '{config.playwright_mcp_config_path}' does not exist or is not a file. Ignoring.")
 
     # Configure MCP mode based on config.mode
     if config.headless:

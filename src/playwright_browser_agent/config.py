@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     # Browser settings
     mode: str = "snapshot"
     headless: bool = False
+    playwright_mcp_config_path: Optional[str] = None # Path to Playwright MCP JSON config file
 
     # Recording settings
     record: bool = False
