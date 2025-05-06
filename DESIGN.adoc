@@ -54,10 +54,17 @@ Use Typer to expose two commands: `chat` and `batch`.
 def chat(
   provider: str = Option(...),
   model: str = Option("gpt-3.5-turbo"),
-  mode: MCPMode = Option(MCPMode.snapshot, help="Interaction mode: snapshot, headless, vision"),
+  mode: MCPMode = Option(MCPMode.snapshot, help="Interaction mode: snapshot or vision"),
+  headless: bool = Option(False, help="Run browser headless"),
   record: bool = Option(False),
 ):
-    cfg = config.load(provider=provider, model=model, mode=mode.value, record=record)
+    cfg = config.load(
+        provider=provider,
+        model=model,
+        mode=mode.value,
+        headless=headless,
+        record=record
+    )
     asyncio.run(agent.run_agent_chat_session(cfg))
 ----
 
@@ -69,10 +76,17 @@ def batch(
   file: Path,
   provider: str = Option(...),  # same flags as chat
   model: str = Option(...),
-  mode: MCPMode = Option(MCPMode.snapshot, help="Interaction mode: snapshot, headless, vision"),
+  mode: MCPMode = Option(MCPMode.snapshot, help="Interaction mode: snapshot or vision"),
+  headless: bool = Option(False, help="Run browser headless"),
   record: bool = Option(False),
 ):
-    cfg = config.load(provider=provider, model=model, mode=mode.value, record=record)
+    cfg = config.load(
+        provider=provider,
+        model=model,
+        mode=mode.value,
+        headless=headless,
+        record=record
+    )
     lines = [l for l in file.read_text().splitlines() if l.strip()]
     asyncio.run(agent.run_agent_batch_session(cfg, lines))
     utils.wait_for_keypress()
@@ -89,6 +103,7 @@ from langgraph.prebuilt import create_react_agent
 from langchain_community.chat_models import ChatLiteLLM
 from langchain_mcp_adapters.client import MultiServerMCPClient # Import the MCP client
 # Assume prompts.py and config.py are correctly set up
+from .prompts import build_system_prompt # Use actual import
 
 class Agent:
     # NOTE: Initialization and running methods likely need to be async
@@ -100,69 +115,71 @@ class Agent:
         # 1. Initialize LLM
         self.llm = ChatLiteLLM(provider=cfg.provider, model=cfg.model, streaming=True)
 
-        # 2. Setup MCP Client (details abstracted for design doc)
-        # The actual implementation would use 'async with MultiServerMCPClient(...)'
-        # and pass the necessary server config (command, path, headless etc.)
-        # For the design, we represent getting tools conceptually:
-        # mcp_client = MultiServerMCPClient(cfg.mcp_server_config)
-        # tools = mcp_client.get_tools() # Conceptual - actual call is async
-
-        # MCP server config now depends on cfg.mode (passed to _setup_agent_resources internally)
-        # The actual setup happens within _setup_agent_resources called by run_..._session
+        # 2. Setup MCP Client and get tools conceptually
+        # The actual setup (including passing mode/headless to configure MCP server)
+        # happens within _setup_agent_resources called by run_..._session
         llm, mcp_config, system_prompt = _setup_agent_resources(cfg)
 
         # Tools are loaded async within the run methods, simplified here
         tools = ["PlaceholderTool"] # Placeholder for conceptual design
 
-        # 3. Prepare system message/prompt
-        system_message = prompts.build(self.cfg.record)
+        # 3. Prepare system message/prompt using the actual function
+        # system_message is built inside _setup_agent_resources now, using build_system_prompt
+        # system_message = prompts.build_system_prompt(
+        #     mode=self.cfg.mode,
+        #     headless=self.cfg.headless,
+        #     record_screenshots=self.cfg.record
+        # )
 
         # 4. Create the LangGraph agent graph
         self.graph = create_react_agent(
             self.llm,
             tools=tools,
-            state_modifier=system_message # Pass prompt via state_modifier
+            # System prompt is typically passed within the messages input dictionary
+            # state_modifier=system_message # Pass prompt via state_modifier - Not typical for create_react_agent
         )
 
-    def _load_mcp_tools_sync(self):
-        # Placeholder: In reality, this involves async setup and client.get_tools()
-        # MCP configuration (like headless/vision) is now handled in _setup_agent_resources
-        # based on self.cfg.mode, not directly here.
-        # For the design doc, we just indicate that tools are loaded.
-        # Example tool (replace with actual loaded tool)
-        from langchain_mcp_adapters.tools import PlaywrightMCPTool # Example
-        # The tool itself doesn't usually take headless directly, the server connection does
-        return [PlaywrightMCPTool()] # Simplified representation
-
-    def run_chat_loop(self):
-        # This method is replaced by run_agent_chat_session in the actual agent.py
+    # Remove _load_mcp_tools_sync and run_chat_loop placeholders
+    # as the logic is now in async run_agent_*_session functions
 
     def send(self, user_str):
-        # Simplified send using the LangGraph agent
+        # Simplified send using the LangGraph agent - Primarily for batch concept
         print(f"Processing: {user_str}")
-        # Actual invocation would be async: await self.graph.ainvoke(...)
-        response = self.graph.invoke({"messages": [("user", user_str)]})
+        # Actual invocation would be async: await self.graph.ainvoke or astream_events
+        # System prompt is passed in messages list in the actual implementation
+        response = self.graph.invoke({"messages": [
+            ("system", "Placeholder System Prompt"), # System prompt passed here
+            ("user", user_str)
+        ]})
         final_message = response.get("messages", [])[-1]
         print(f"RESPONSE: {getattr(final_message, 'content', '...')}")
 ----
 
 == 5. System Prompt Templates (prompts.py)
 
-Encapsulate LLM instructions; include screenshot hint only if `--record` is set.
+Encapsulate LLM instructions; include screenshot hint only if `--record` is set. Dynamically adjust tool descriptions and interaction guidance based on `--mode` and `--headless`.
 
 [source,python]
 ----
-def build(do_screenshots: bool) -> str:
-    base = """
-You are a browser-automation agent.
-Use the `playwright_mcp` tool to carry out user instructions one at a time.
-Return only the action result or observation for each step.
-"""
-    if do_screenshots:
-        base += """
-After every successful action, call `playwright_mcp.screenshot(path=\"auto\")` to capture a PNG.
-"""
-    return base.strip()
+def build_system_prompt(mode: str = "snapshot", headless: bool = False, record_screenshots: bool = False) -> str:
+    # Base template with placeholders for mode, headless status, tools, interactions
+    base_template = """
+    You are a web browsing agent...
+    You operate in **{mode} Mode** {headless_status_detail}.
+    ...
+    Current Configuration:
+    - MCP Mode: {mode}
+    - Headless: {headless_status}
+    """
+
+    # Logic to select SNAPSHOT_TOOLS_DESC/VISION_TOOLS_DESC based on mode
+    # Logic to select SNAPSHOT_INTERACTION_INST/VISION_INTERACTION_INST based on mode
+    # Format the template with selected descriptions, instructions, and status
+
+    if record_screenshots:
+        prompt += "\n\n" + SCREENSHOT_INSTRUCTIONS
+
+    return prompt.strip()
 ----
 
 == 6. Packaging & Entry Point
