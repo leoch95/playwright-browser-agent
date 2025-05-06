@@ -60,7 +60,7 @@ toc::[]
 == Testing
 
 * ✅ Set up testing environment (pytest, placeholders)
-* [square]#▢# Test interactive chat mode
+* [square]#✅# Test interactive chat mode
 * [square]#▢# Test batch processing
 * [square]#▢# Verify screenshot recording
 * [square]#▢# Test headless mode
