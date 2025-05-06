@@ -45,12 +45,20 @@ def _setup_agent_resources(config: Settings) -> tuple[ChatLiteLLM, Dict[str, Any
     """Helper to configure LLM, MCP, and system prompt."""
     # 1. Build MCP Configuration
     mcp_args = ["@playwright/mcp@latest"]
-    if config.headless:
+
+    # Configure MCP mode based on config.mode
+    if config.mode == "headless":
         mcp_args.append("--headless")
         print("Configuring Playwright MCP for Headless mode.")
-    else:
+    elif config.mode == "vision":
         mcp_args.append("--vision")
-        print("Configuring Playwright MCP for Vision mode (non-headless).")
+        print("Configuring Playwright MCP for Vision mode.")
+    elif config.mode == "snapshot":
+        print("Configuring Playwright MCP for Snapshot mode (default).")
+        # No extra args needed for snapshot mode
+    else:
+        # This case should ideally not happen due to Enum validation in CLI
+        print(f"Warning: Unknown MCP mode '{config.mode}', defaulting to snapshot.")
 
     mcp_config = {
         "playwright": {

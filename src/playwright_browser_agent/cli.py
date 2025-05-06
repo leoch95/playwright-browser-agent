@@ -2,6 +2,7 @@
 
 import asyncio  # Need asyncio to run the agent
 import sys
+from enum import Enum  # Add Enum import
 from typing import Optional
 
 import typer
@@ -13,6 +14,12 @@ from .config import load_config
 from .utils import wait_for_keypress  # Import wait function
 
 # from .agent import run_chat_loop # Placeholder for agent import
+
+# Define the modes using Enum
+class MCPMode(str, Enum):
+    snapshot = "snapshot"
+    headless = "headless"
+    vision = "vision"
 
 app = typer.Typer(
     name="pb-agent",
@@ -43,10 +50,11 @@ def chat(
         "-m",
         help="Specific LLM model to use (e.g., 'gpt-4o', 'claude-3-opus-20240229'). Reads from LLM_MODEL env var if not set.",
     ),
-    headless: bool = typer.Option(
-        False,
-        "--headless",
-        help="Run the browser in headless mode (no GUI).",
+    mode: MCPMode = typer.Option(
+        MCPMode.snapshot, # Default to snapshot
+        "--mode",
+        help="Interaction mode for Playwright MCP: 'snapshot' (default, accessibility), 'headless' (no GUI), 'vision' (screenshot-based).",
+        case_sensitive=False, # Allow lowercase input
     ),
     record: bool = typer.Option(
         False,
@@ -64,7 +72,7 @@ def chat(
         config = load_config(
             llm_provider=llm_provider,
             llm_model=llm_model,
-            headless=headless,
+            mode=mode.value, # Pass the string value of the enum
             record=record,
         )
     except SystemExit:
@@ -72,7 +80,7 @@ def chat(
         raise typer.Exit(code=1)
 
     print(f"Using LLM: {config.llm_provider}/{config.llm_model}")
-    print(f"Headless mode: {config.headless}")
+    print(f"MCP Mode: {config.mode}")
     print(f"Recording screenshots: {config.record}")
 
     # Placeholder: Call the agent's chat loop (to be implemented in agent.py)
@@ -113,10 +121,11 @@ def batch(
         "-m",
         help="LLM model override for batch mode.",
     ),
-    headless: bool = typer.Option(
-        False,
-        "--headless",
-        help="Run the browser in headless mode for batch processing.",
+    mode: MCPMode = typer.Option(
+        MCPMode.snapshot, # Default to snapshot
+        "--mode",
+        help="Interaction mode for Playwright MCP: 'snapshot' (default, accessibility), 'headless' (no GUI), 'vision' (screenshot-based).",
+        case_sensitive=False, # Allow lowercase input
     ),
     record: bool = typer.Option(
         False,
@@ -132,14 +141,14 @@ def batch(
         config = load_config(
             llm_provider=llm_provider,
             llm_model=llm_model,
-            headless=headless,
+            mode=mode.value, # Pass the string value of the enum
             record=record,
         )
     except SystemExit:
         raise typer.Exit(code=1)
 
     print(f"Using LLM: {config.llm_provider}/{config.llm_model}")
-    print(f"Headless mode: {config.headless}")
+    print(f"MCP Mode: {config.mode}")
     print(f"Recording screenshots: {config.record}")
 
     # Placeholder: Read file and call agent's batch processing function

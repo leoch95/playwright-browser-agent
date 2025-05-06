@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     # google_api_key: Optional[str] = None
 
     # Browser settings
-    headless: bool = False
+    mode: str = "snapshot"
 
     # Recording settings
     record: bool = False
@@ -90,7 +90,7 @@ if __name__ == "__main__":
     print("--- Configuration Loaded ---")
     print(f"LLM Provider: {config.llm_provider}")
     print(f"LLM Model: {config.llm_model}")
-    print(f"Headless: {config.headless}")
+    print(f"Mode: {config.mode}")
     print(f"Record: {config.record}")
     print(f"Artifacts Dir: {config.artifacts_dir}")
     # API keys are read from env, not stored in config object
