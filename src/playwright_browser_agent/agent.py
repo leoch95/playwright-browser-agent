@@ -248,7 +248,7 @@ async def run_agent_batch_session(config: Settings, instructions: List[str]):
         print("\n--- Batch processing finished --- ")
 
         # Pass the system prompt string to the loop/handler
-        await run_chat_loop(agent_executor, thread_id=batch_thread_id, initial_system_prompt=system_prompt_string)
+        # await run_chat_loop(agent_executor, thread_id=batch_thread_id, initial_system_prompt=system_prompt_string) # Removed this line
 
 # Example usage (for testing, will be called from cli.py)
 async def main():
