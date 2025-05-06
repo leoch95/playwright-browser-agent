@@ -205,13 +205,16 @@ async def run_agent_batch_session(config: Settings, instructions: List[str]):
                         # TODO: If tool failed, print " failed" and maybe the error
 
 
-                    # Accumulate the final answer if needed (depends on ReAct structure)
-                    if "output" in data: # Assuming final output is in data key for final event
-                        current_step_output = data["output"]
+                    # Final answer accumulation is handled by the on_chat_model_stream block.
+                    # The 'output' key in data often contains structured state (full messages, tool calls)
+                    # not just the final response string suitable for AIMessage content.
+                    # REMOVED: if "output" in data: ... block
+
 
                 print() # Add a newline after the full response for the step
 
-                # Append the final AI message from this step to maintain context for the next step
+                # Append the final AI message from this step (accumulated from the stream)
+                # to maintain context for the next step
                 if current_step_output:
                     messages.append(AIMessage(content=current_step_output))
                 else:
