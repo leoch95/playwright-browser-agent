@@ -43,9 +43,8 @@ async def test_chat_command_invocation(mock_asyncio_run, mock_run_agent_chat_ses
     mock_config = MagicMock(spec=Settings)
     mock_config.llm_provider = "mock_provider"
     mock_config.llm_model = "mock_model"
-    mock_config.mode = "snapshot"
-    mock_config.headless = False
     mock_config.record = False
+    mock_config.artifacts_dir = "mock_artifacts"
     mock_load_config.return_value = mock_config
 
     # Configure asyncio.run mock to schedule the coroutine on the existing loop
@@ -72,9 +71,8 @@ async def test_batch_command_invocation(mock_wait_for_keypress, mock_asyncio_run
     mock_config = MagicMock(spec=Settings)
     mock_config.llm_provider = "mock_provider"
     mock_config.llm_model = "mock_model"
-    mock_config.mode = "snapshot"
-    mock_config.headless = False
     mock_config.record = False
+    mock_config.artifacts_dir = "mock_artifacts"
     mock_load_config.return_value = mock_config
 
     # Configure asyncio.run mock to schedule the coroutine on the existing loop
@@ -96,4 +94,4 @@ async def test_batch_command_invocation(mock_wait_for_keypress, mock_asyncio_run
     mock_asyncio_run.assert_called_once() # Simpler assertion
     mock_wait_for_keypress.assert_called_once()
 
-# TODO: Add tests for flags (--headless, --record, --provider, --model)
+# TODO: Add tests for flags (--record, --provider, --model)
