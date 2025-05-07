@@ -32,8 +32,8 @@ live session
 |Support multiple LLM providers via LiteLLM |Agent works when
 corresponding `<PROVIDER>_API_KEY` is present in `.env`
 
-|Optional recording of PNG screenshots per step |`--record` flag
-produces timestamped PNGs in `artifacts/`
+|Optional recording of PNG screenshots per step |`--record` flag (with optional `--screenshot-dir`)
+produces timestamped PNGs in `[screenshot_dir]/<timestamp>/step_<N>.png`
 |===
 
 == 4. Assumptions & Constraints
@@ -67,6 +67,7 @@ for each agent step for later review.
 . *CLI Wrapper*
 * Provide an installable console-script `pb-agent`.
 * Sub-commands: `chat` and `batch`.
+* Common options: `--llm-provider`, `--llm-model`, `--record`, `--screenshot-dir`, `--playwright-mcp-config-path`.
 . *Interactive Chat Mode*
 * Maintain a single browser/context for the entire conversation.
 * Exit when user types `exit` or `bye` (case-insensitive).
@@ -78,8 +79,8 @@ keyboard input.
 . *Streaming Output*
 * Stream agent thoughts/actions/observations to STDOUT in real time.
 . *Screenshot Recording*
-* When `--record` is supplied, capture PNG after each agent action;
-store under `artifacts/<timestamp>/step_<N>.png`.
+* When `--record` is supplied, capture PNG after each agent action.
+* Screenshots are stored under `[base_dir]/<timestamp>/step_<N>.png`, where `base_dir` is specified by `--screenshot-dir` (defaults to `artifacts`).
 . *Config Loading*
 * Use `python-dotenv` to load `.env`; allow CLI flags to override key
 values.
@@ -135,8 +136,8 @@ _Total: ~7 work-days (1.5 weeks)_
 * Browser is visible by default.
 * Entering `open https://example.com` (or similar) navigates correctly.
 * Typing `exit` ends the session gracefully.
-* `pb-agent batch samples/flow.txt --record` processes all lines, writes
-PNGs, waits for key-press.
+* `pb-agent batch samples/flow.txt --record --screenshot-dir custom_artifacts` processes all lines, writes
+PNGs to `custom_artifacts/<timestamp>/step_<N>.png`, waits for key-press.
 * Works with at least *two* LLM providers by changing `.env` keys.
 
 == 11. Open Questions & Future Work

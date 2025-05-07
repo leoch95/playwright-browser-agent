@@ -2,13 +2,13 @@
 
 A browser automation agent powered by Playwright and driven by Large Language Models (LLMs) via LangGraph and LiteLLM.
 
-## Features (Planned)
+## Features
 
 * Interactive chat mode for step-by-step browser control.
 * Batch mode for executing predefined instruction sequences.
 * Support for multiple LLM providers (OpenAI, Anthropic, Google, etc.) via LiteLLM.
-* Uses Playwright's accessibility features via MCP for robust interaction (avoids brittle selectors).
-* Optional screenshot recording for visual traceability.
+* Uses Playwright's accessibility features via MCP for robust interaction.
+* Optional screenshot recording to `artifacts/<timestamp>/step_<N>.png` for visual traceability.
 * Headless browser support.
 
 ## Setup
@@ -67,7 +67,7 @@ A browser automation agent powered by Playwright and driven by Large Language Mo
 
 The agent provides two main commands: `chat` and `batch`.
 
-**Important:** The Playwright MCP server (`@playwright/mcp`) needs to be running for the agent to function. The agent currently expects it to be started via `stdio` transport using `npx @playwright/mcp@latest` (this might be automated or configurable in the future).
+**Important:** The Playwright MCP server (`@playwright/mcp`) is managed automatically by the agent.
 
 ### Interactive Chat Mode (`chat`)
 
@@ -80,11 +80,8 @@ uv run pb-agent chat
 # Override LLM provider and model
 uv run pb-agent chat --llm-provider anthropic --llm-model claude-3-opus-20240229
 
-# Run in headless mode
-uv run pb-agent chat --headless
-
 # Record screenshots after each action
-uv run pb-agent chat --record
+uv run pb-agent chat --record --screenshot-dir my_chat_screenshots
 ```
 
 Inside the chat, type your instructions (e.g., `navigate to google.com`, `search for playwright documentation`, `click the first link`). Type `exit` or `bye` to end the session.
@@ -106,22 +103,22 @@ Execute a sequence of instructions from a file.
 
     ```bash
     # Basic usage
+    uv run pb-agent batch tasks.txt
 
-uv run pb-agent batch tasks.txt
-
-    # With headless and recording
-uv run pb-agent batch tasks.txt --headless --record
+    # With recording and custom screenshot directory
+    uv run pb-agent batch tasks.txt --record --screenshot-dir my_batch_screenshots
 
     # Override LLM for the batch run
-uv run pb-agent batch tasks.txt --llm-provider openai --llm-model gpt-3.5-turbo
+    uv run pb-agent batch tasks.txt --llm-provider openai --llm-model gpt-3.5-turbo
     ```
 
 ### Global Options
 
 * `--llm-provider`/`-p`: Specify the LLM provider (overrides `.env`).
 * `--llm-model`/`-m`: Specify the LLM model (overrides `.env`).
-* `--headless`: Run the browser without a GUI.
-* `--record`: Save screenshots to `artifacts/<timestamp>/` after each browser action.
+* `--record`: Enable saving screenshots to a timestamped subfolder within the directory specified by `--screenshot-dir`. The actual files will be named `step_<N>.png`.
+* `--screenshot-dir`: Specify the base directory for saving screenshots (defaults to `artifacts`). Used in conjunction with `--record`.
+* `--playwright-mcp-config-path`: Path to a custom Playwright MCP JSON configuration file.
 
 ## Development
 

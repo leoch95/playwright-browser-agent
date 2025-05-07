@@ -55,6 +55,8 @@ def chat(
   provider: str = Option(...),
   model: str = Option("gpt-3.5-turbo"),
   record: bool = Option(False),
+  playwright_mcp_config_path: Optional[str] = Option(None),
+  artifacts_dir: str = Option("artifacts")
 ):
     cfg = config.load(
         provider=provider,
@@ -73,6 +75,8 @@ def batch(
   provider: str = Option(...),  # same flags as chat
   model: str = Option(...),
   record: bool = Option(False),
+  playwright_mcp_config_path: Optional[str] = Option(None),
+  artifacts_dir: str = Option("artifacts")
 ):
     cfg = config.load(
         provider=provider,
@@ -145,7 +149,42 @@ class Agent:
         ]})
         final_message = response.get("messages", [])[-1]
         print(f"RESPONSE: {getattr(final_message, 'content', '...')}")
-----
+
+    # Removed original send method as it was synchronous and not using astream_events
+    # def send(self, user_str):
+    #     # Simplified send using the LangGraph agent - Primarily for batch concept
+    #     print(f"Processing: {user_str}")
+    #     # Actual invocation would be async: await self.graph.ainvoke or astream_events
+    #     # System prompt is passed in messages list in the actual implementation
+    #     response = self.graph.invoke({"messages": [
+    #         ("system", "Placeholder System Prompt"), # System prompt passed here
+    #         ("user", user_str)
+    #     ]})
+    #     final_message = response.get("messages", [])[-1]
+    #     print(f"RESPONSE: {getattr(final_message, 'content', '...')}")
+
+    # The actual method for sending user input and getting a response
+    # would involve invoking the graph, potentially with streaming.
+    # Example for conceptual clarity:
+    async def send_message(self, user_input: str, system_prompt_str: str):
+        # In a real scenario, messages would accumulate in state
+        messages = [
+            ("system", system_prompt_str),
+            ("user", user_input)
+        ]
+        # Example of how one might stream events from the graph
+        async for event in self.graph.astream_events(
+            {"messages": messages}, version="v1"
+        ):
+            # Process different types of events (on_chat_model_stream, on_tool_end, etc.)
+            # This part needs to be fleshed out based on LangGraph's event streaming API
+            # For now, just printing the event type
+            print(f"Event: {event['event']}")
+            if event['event'] == "on_chat_model_stream":
+                chunk = event["data"]["chunk"]
+                if hasattr(chunk, 'content'):
+                    print(chunk.content, end="", flush=True)
+            # Add more event handling as needed
 
 == 5. System Prompt Templates (prompts.py)
 
@@ -153,19 +192,37 @@ Encapsulate LLM instructions; include screenshot hint only if `--record` is set.
 
 [source,python]
 ----
-def build_system_prompt(record_screenshots: bool = False) -> str:
+def build_system_prompt(record_screenshots: bool = False, headless_status: bool = False, artifacts_dir: str = "artifacts") -> str:
     # Base template with placeholders
     base_template = """
     You are a web browsing agent...
+    Your goal is to assist the user with web navigation and interaction tasks.
+    You can use the provided tools to interact with the web page.
     {headless_status_detail}
-    ...
     Current Configuration:
-    - Headless: {headless_status}
+    - Headless: {is_headless}
+    - Recording Screenshots: {is_recording}
     """
 
-    # Format the template with selected descriptions, instructions, and status
+    headless_status_detail_str = "You are operating in a headless browser environment. You will not see the browser GUI. Rely on the observation data provided." if headless_status else "You are operating in a browser with a visible GUI."
+
+    prompt = base_template.format(
+        headless_status_detail=headless_status_detail_str,
+        is_headless=str(headless_status),
+        is_recording=str(record_screenshots)
+    )
 
     if record_screenshots:
+        # Note: The actual path construction including timestamp and step number
+        # will be handled by the agent/tool when a screenshot is taken.
+        # The prompt only needs to inform the LLM that recording is active
+        # and where screenshots are generally stored.
+        SCREENSHOT_INSTRUCTIONS = f"""
+        Screenshots are being recorded after your actions.
+        They will be saved in a timestamped subfolder within: {artifacts_dir}
+        Example path: {artifacts_dir}/YYYYMMDD_HHMMSS_ffffff/step_N.png
+        When asked to take a screenshot, use the appropriate tool. You don't need to specify the filename.
+        """
         prompt += "\n\n" + SCREENSHOT_INSTRUCTIONS
 
     return prompt.strip()
