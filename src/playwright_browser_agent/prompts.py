@@ -33,7 +33,7 @@ SNAPSHOT_TOOLS_DESC = """
 - `browser_navigate_back`: Go back in history.
 - `browser_navigate_forward`: Go forward in history.
 - `browser_select_option`: Select option(s) in a dropdown identified by its `ref`.
-- `browser_take_screenshot`: Take a screenshot (primarily for user reference/recording, not actions).
+- `browser_take_screenshot`: Take a screenshot. **Use arguments to request a raw PNG image if possible (e.g., by setting type to 'png').** This is primarily for user reference/recording, not actions.
 - (Potentially others like tab management, file handling, etc.)
 """
 
@@ -45,7 +45,7 @@ VISION_TOOLS_DESC = """
 - `browser_navigate_back`: Go back in history.
 - `browser_navigate_forward`: Go forward in history.
 - `browser_select_option`: Select option(s) in a dropdown (may require careful visual targeting).
-- `browser_take_screenshot`: Take a screenshot (used for both visual analysis by the agent and user reference/recording).
+- `browser_take_screenshot`: Take a screenshot. **Use arguments to request a raw PNG image if possible (e.g., by setting type to 'png').** This is used for both visual analysis by the agent and user reference/recording.
 - (Potentially others like tab management, file handling, etc.)
 """
 
@@ -63,6 +63,7 @@ The primary input is the visual representation of the page.
 # Additional instructions appended when screenshot recording is enabled
 SCREENSHOT_INSTRUCTIONS = """
 IMPORTANT: After each browser action (like navigate, click, type, select), you MUST call `browser_take_screenshot` to record the visual state of the page for the user.
+**When calling `browser_take_screenshot`, ensure you request a raw PNG image output (e.g., by specifying `type: 'png'` or similar arguments if the tool supports them).**
 """
 
 def build_system_prompt(mode: str = "snapshot", headless: bool = False, record_screenshots: bool = False) -> str:

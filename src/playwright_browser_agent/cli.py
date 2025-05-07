@@ -70,6 +70,11 @@ def chat(
         "--playwright-mcp-config-path",
         help="Path to a custom Playwright MCP JSON configuration file.",
     ),
+    artifacts_dir: str = typer.Option(
+        "artifacts", # Default base directory for artifacts, timestamp will be appended
+        "--screenshot-dir",
+        help="Base directory to save screenshots. A timestamped subfolder will be created here.",
+    ),
 ):
     """Starts an interactive chat session to control the browser agent."""
     print("Starting interactive chat mode...")
@@ -85,6 +90,7 @@ def chat(
             headless=headless, # Pass headless flag
             record=record,
             playwright_mcp_config_path=playwright_mcp_config_path, # Pass the config path
+            artifacts_dir=artifacts_dir, # Pass the artifacts directory
         )
     except SystemExit:
         # Config validation failed (e.g., missing API key), error already printed
@@ -94,6 +100,7 @@ def chat(
     print(f"MCP Mode: {config.mode}")
     print(f"Headless: {config.headless}") # Print headless status
     print(f"Recording screenshots: {config.record}")
+    print(f"Screenshots will be saved in subdirectories of: {config.artifacts_dir}")
 
     # Placeholder: Call the agent's chat loop (to be implemented in agent.py)
     # print("\n>>> Placeholder: Agent chat loop would start here <<<") # Remove this line
@@ -154,6 +161,11 @@ def batch(
         "--playwright-mcp-config-path",
         help="Path to a custom Playwright MCP JSON configuration file for batch mode.",
     ),
+    artifacts_dir: str = typer.Option(
+        "artifacts", # Default base directory for artifacts, timestamp will be appended
+        "--screenshot-dir",
+        help="Base directory to save screenshots during batch. A timestamped subfolder will be created here.",
+    ),
 ):
     """Processes browser instructions from a file in batch mode."""
     print(f"Starting batch mode with file: {file}")
@@ -167,6 +179,7 @@ def batch(
             headless=headless, # Pass headless flag
             record=record,
             playwright_mcp_config_path=playwright_mcp_config_path, # Pass the config path
+            artifacts_dir=artifacts_dir, # Pass the artifacts directory
         )
     except SystemExit:
         raise typer.Exit(code=1)
@@ -175,6 +188,7 @@ def batch(
     print(f"MCP Mode: {config.mode}")
     print(f"Headless: {config.headless}") # Print headless status
     print(f"Recording screenshots: {config.record}")
+    print(f"Screenshots will be saved in subdirectories of: {config.artifacts_dir}")
 
     # Placeholder: Read file and call agent's batch processing function
     try:

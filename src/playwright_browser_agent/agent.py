@@ -1,6 +1,9 @@
 """Core agent logic using LangChain and Playwright-MCP."""
 
 import asyncio
+import base64  # Import base64 for decoding
+import inspect  # For inspect.isclass
+import sys
 import uuid  # Import uuid for generating thread IDs
 from pathlib import Path  # Add Path import
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
@@ -9,7 +12,8 @@ from langchain.agents import \
     AgentExecutor  # Assuming create_react_agent returns this type
 from langchain_core.messages import \
     SystemMessage  # SystemMessage still needed for batch mode starting message
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages import (  # Added ToolMessage for type check
+    AIMessage, BaseMessage, HumanMessage, ToolMessage)
 from langchain_core.prompts import \
     ChatPromptTemplate  # Import ChatPromptTemplate
 # Import RunnableConfig
@@ -26,6 +30,7 @@ from langgraph.prebuilt import create_react_agent
 # Import config type and prompt builder
 from .config import Settings
 from .prompts import build_system_prompt  # Correct import
+from .utils import manage_screenshot_dir  # Import screenshot dir manager
 
 # from .utils import wait_for_keypress # Remove wait function import from here
 
@@ -45,6 +50,98 @@ from .prompts import build_system_prompt  # Correct import
 
 # No need for MCPConnectionsType alias anymore
 
+def _debug_print_structure(obj: Any, indent: int = 0, label: str = ""):
+    """Recursively prints the type and structure of an object for debugging."""
+    prefix = "  " * indent
+    obj_type_str = str(type(obj))
+
+    print(f"{prefix}{label}({obj_type_str}): ", end="")
+
+    if obj is None or isinstance(obj, (str, int, float, bool)):
+        print(repr(obj))
+        return
+
+    if isinstance(obj, dict):
+        print("{")
+        for k, v in obj.items():
+            _debug_print_structure(v, indent + 1, label=f"'{k}'")
+        print(f"{prefix}}}")
+    elif isinstance(obj, (list, tuple, set)):
+        print("[")
+        for i, item in enumerate(obj):
+            _debug_print_structure(item, indent + 1, label=f"[{i}]")
+        print(f"{prefix}]")
+    # Check for common LangChain/LangGraph message types that might have 'content' or 'artifact'
+    elif hasattr(obj, 'artifact') and obj.artifact is not None : # Check artifact first as it's more specific for our case
+        print(f" (has .artifact)")
+        _debug_print_structure(obj.artifact, indent + 1, label=".artifact")
+    elif hasattr(obj, 'content') and obj.content is not None:
+         print(f" (has .content)")
+         _debug_print_structure(obj.content, indent + 1, label=".content")
+    elif hasattr(obj, '__dict__') and not inspect.isclass(obj): # Avoid trying to print class attributes
+        print("{ (attributes via __dict__)")
+        for attr, value in obj.__dict__.items():
+            if not callable(value) and not attr.startswith("__"): # Avoid callables and private/magic methods
+                 _debug_print_structure(value, indent + 1, label=f".{attr}")
+        print(f"{prefix}}}")
+    else:
+        try:
+            # Fallback for other types, try to represent them
+            print(repr(obj))
+        except Exception:
+            print("<Unable to represent>")
+
+def _handle_screenshot_tool_end(
+    tool_output_data: Any,
+    record_screenshots_flag: bool,
+    screenshot_session_dir: Optional[Path],
+    step_counter: int
+) -> int:
+    """Handles the output of the browser_take_screenshot tool, saves image, and logs."""
+    if record_screenshots_flag and screenshot_session_dir:
+        step_counter += 1
+        screenshot_file_path = None
+        try:
+            # tool_output_data is expected to be a dictionary containing an 'artifact' list or a ToolMessage with 'content' string and 'artifact' list
+            artifacts_list = None
+            if isinstance(tool_output_data, dict):
+                artifacts_list = tool_output_data.get("artifact")
+            elif hasattr(tool_output_data, 'artifact'): # Handle ToolMessage-like objects
+                artifacts_list = tool_output_data.artifact
+
+            found_image_artifact = None # Renamed from image_artifact_dict
+
+            if isinstance(artifacts_list, list):
+                for item in artifacts_list:
+                    # Correctly check for ImageContent object attributes
+                    if (hasattr(item, 'type') and item.type == "image" and
+                        hasattr(item, 'data') and item.data): # Check item.data is not None or empty
+                        found_image_artifact = item # Store the object itself
+                        break
+
+            if found_image_artifact: # If an image artifact object was found
+                image_data_b64 = found_image_artifact.data # Access .data attribute
+                image_bytes = base64.b64decode(image_data_b64)
+                screenshot_file_name = f"step_{step_counter}.png"
+                screenshot_file_path = screenshot_session_dir / screenshot_file_name
+                with open(screenshot_file_path, 'wb') as f:
+                    f.write(image_bytes)
+                print(f"📸 Screenshot taken: {screenshot_file_path.resolve()}", flush=True)
+            else:
+                # This message will still show tool_output_data if debugging is needed
+                print(f"📸 Screenshot tool ran, but no image artifact found or artifact format unexpected. Debugging output structure:", flush=True)
+                _debug_print_structure(tool_output_data, label="tool_output_data")
+        except Exception as e:
+            print(f"📸 Error saving screenshot: {e}. Path: {screenshot_file_path}", flush=True)
+            # This message will still show tool_output_data if debugging is needed
+            print(f"Debugging structure of tool_output_data that caused save error:", flush=True)
+            _debug_print_structure(tool_output_data, label="tool_output_data_on_error")
+
+    else:
+        # This case handles when recording is off or dir is not set.
+        # Do not print tool_output_data here as it's not relevant to a format issue.
+        print(f"📸 Screenshot tool finished (recording disabled or screenshot directory issue).", flush=True)
+    return step_counter
 
 def _setup_agent_resources(config: Settings) -> tuple[ChatLiteLLM, Dict[str, Any], str]:
     """Helper to configure LLM, MCP, and system prompt string."""
@@ -118,6 +215,15 @@ async def run_agent_chat_session(config: Settings):
     # Initialize MemorySaver for in-memory history
     checkpointer = MemorySaver()
 
+    # Manage screenshot directory for this session
+    screenshot_session_dir: Optional[Path] = None
+    if config.record:
+        try:
+            screenshot_session_dir = manage_screenshot_dir(config.artifacts_dir)
+        except Exception as e:
+            print(f"Warning: Could not create screenshot directory. Recording will be disabled. Error: {e}", file=sys.stderr)
+            # Optionally, set config.record = False here if you want to disable recording fully
+
     # Initialize PlaywrightMCPTool via MultiServerMCPClient
     async with MultiServerMCPClient(connections=mcp_config) as client: # type: ignore
         tools = client.get_tools()
@@ -134,15 +240,28 @@ async def run_agent_chat_session(config: Settings):
         # Pass a unique thread_id for the session
         thread_id = str(uuid.uuid4())
         print(f"\nStarting chat session (Thread ID: {thread_id}). Type 'exit' or 'bye' to end.")
-        await run_chat_loop(agent_executor, thread_id=thread_id, initial_system_prompt=system_prompt_string)
+        await run_chat_loop(
+            agent_executor,
+            thread_id=thread_id,
+            initial_system_prompt=system_prompt_string,
+            record_screenshots=config.record,
+            screenshot_dir=screenshot_session_dir
+        )
 
-async def run_chat_loop(agent_executor: Any, thread_id: str, initial_system_prompt: str):
+async def run_chat_loop(
+    agent_executor: Any,
+    thread_id: str,
+    initial_system_prompt: str,
+    record_screenshots: bool,
+    screenshot_dir: Optional[Path]
+):
     """Runs the interactive chat loop using the agent's stream_events method with memory."""
     # Manually add system prompt ONLY IF history is empty (first run for this thread_id)
     # Checkpointer handles history, so we don't manage a local messages list across turns.
     is_first_turn = True # Assume first turn initially
     # TODO: A more robust check would involve querying the checkpointer/store
     # for existing messages for thread_id, but this requires more setup.
+    step_counter = 0 # Initialize step counter for screenshots for this thread
 
     while True:
         user_input = input("\n💁 User: ")
@@ -176,17 +295,25 @@ async def run_chat_loop(agent_executor: Any, thread_id: str, initial_system_prom
                     print(chunk_content.content, end="", flush=True)
                     # No need to manually accumulate AI response here, LangGraph handles state
             elif event == "on_tool_start" and name:
-                # Check if it's the final agent step before printing tool call
-                # This avoids printing tool calls when the LLM is just thinking
-                # Heuristic: Assume a non-empty data dict means it's a real call?
-                # A better check might be needed depending on langgraph event details
-                # For now, print all tool starts
-                print(f"🛠️ Calling tool [{name}]...", end="", flush=True)
+                # tool_input = data.get("input", {}) # LangGraph typically puts tool input here - No longer needed for logging
+                if name == "browser_take_screenshot":
+                    print(f"📸 Attempting to take screenshot...", flush=True)
+                else:
+                    # print(f"🛠️ Calling tool [{name}] with input: {tool_input}...", end="", flush=True)
+                    print(f"🛠️ Calling tool [{name}]...", end="", flush=True)
             elif event == "on_tool_end" and name:
-                # Check for errors in tool execution if possible from `data`
-                # E.g., if data['output'] contains error info or if a specific error key exists
-                # Assuming simple success print for now
-                print(" success", flush=True)
+                tool_output_data = data.get("output") # LangGraph typically puts tool output here
+
+                if name == "browser_take_screenshot":
+                    step_counter = _handle_screenshot_tool_end(
+                        tool_output_data,
+                        record_screenshots,
+                        screenshot_dir,
+                        step_counter
+                    )
+                else:
+                    # Generic success message for other tools, can be expanded if needed
+                    print(f" success.", flush=True)
                 # Handle potential errors by inspecting 'data' if LangGraph provides it
                 # Example (pseudo-code): if 'error' in data: print(f" failed: {data['error']}", flush=True)
 
@@ -200,6 +327,14 @@ async def run_agent_batch_session(config: Settings, instructions: List[str]):
     # but state isn't intended to persist *between* instructions in batch mode currently.
     # A single checkpointer can be reused.
     checkpointer = MemorySaver()
+
+    # Manage screenshot directory for this session
+    screenshot_session_dir: Optional[Path] = None
+    if config.record:
+        try:
+            screenshot_session_dir = manage_screenshot_dir(config.artifacts_dir)
+        except Exception as e:
+            print(f"Warning: Could not create screenshot directory for batch. Recording will be disabled. Error: {e}", file=sys.stderr)
 
     # Initialize PlaywrightMCPTool via MultiServerMCPClient
     async with MultiServerMCPClient(connections=mcp_config) as client: # type: ignore
@@ -221,6 +356,8 @@ async def run_agent_batch_session(config: Settings, instructions: List[str]):
         # across instructions within this single batch run.
         batch_thread_id = f"batch-{uuid.uuid4()}"
         print(f"\nStarting batch process (Thread ID: {batch_thread_id})")
+
+        step_counter = 0 # Initialize step counter for screenshots for this batch thread
 
         for i, instruction in enumerate(instructions):
             print(f"\n--- Instruction {i+1}/{len(instructions)} --- ")
@@ -252,10 +389,26 @@ async def run_agent_batch_session(config: Settings, instructions: List[str]):
                             print(chunk_content.content, end="", flush=True)
                             # No manual accumulation
                     elif event == "on_tool_start" and name:
-                        print(f"🛠️ Calling tool [{name}]...", end="", flush=True)
+                        # tool_input = data.get("input", {}) # LangGraph typically puts tool input here - No longer needed for logging
+                        if name == "browser_take_screenshot":
+                            print(f"📸 Attempting to take screenshot...", flush=True)
+                        else:
+                            # print(f"🛠️ Calling tool [{name}] with input: {tool_input}...", end="", flush=True)
+                            print(f"🛠️ Calling tool [{name}]...", end="", flush=True)
                     elif event == "on_tool_end" and name:
-                        print(" success", flush=True)
-                        # TODO: Error handling based on 'data'
+                        tool_output_data = data.get("output") # LangGraph typically puts tool output here
+                        if name == "browser_take_screenshot":
+                            step_counter = _handle_screenshot_tool_end(
+                                tool_output_data,
+                                config.record,
+                                screenshot_session_dir,
+                                step_counter
+                            )
+                        else:
+                            # Generic success message for other tools, can be expanded if needed
+                            print(f" success.", flush=True)
+                        # Handle potential errors by inspecting 'data' if LangGraph provides it
+                        # Example (pseudo-code): if 'error' in data: print(f" failed: {data['error']}", flush=True)
 
                 print() # Add a newline after the full response for the step
 
