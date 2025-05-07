@@ -86,11 +86,9 @@ def chat(
         config = load_config(
             llm_provider=llm_provider,
             llm_model=llm_model,
-            mode=mode.value, # Pass the string value of the enum
-            headless=headless, # Pass headless flag
             record=record,
-            playwright_mcp_config_path=playwright_mcp_config_path, # Pass the config path
-            artifacts_dir=artifacts_dir, # Pass the artifacts directory
+            playwright_mcp_config_path=playwright_mcp_config_path,
+            artifacts_dir=artifacts_dir,
         )
     except SystemExit:
         # Config validation failed (e.g., missing API key), error already printed
@@ -163,8 +161,8 @@ def batch(
             llm_provider=llm_provider,
             llm_model=llm_model,
             record=record,
-            playwright_mcp_config_path=playwright_mcp_config_path, # Pass the config path
-            artifacts_dir=artifacts_dir, # Pass the artifacts directory
+            playwright_mcp_config_path=playwright_mcp_config_path,
+            artifacts_dir=artifacts_dir,
         )
     except SystemExit:
         raise typer.Exit(code=1)
