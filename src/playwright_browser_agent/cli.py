@@ -49,17 +49,6 @@ def chat(
         "-m",
         help="Specific LLM model to use (e.g., 'gpt-4o', 'claude-3-opus-20240229'). Reads from LLM_MODEL env var if not set.",
     ),
-    mode: MCPMode = typer.Option(
-        MCPMode.snapshot, # Default to snapshot
-        "--mode",
-        help="Interaction mode for Playwright MCP: 'snapshot' (default, accessibility) or 'vision' (screenshot-based).",
-        case_sensitive=False, # Allow lowercase input
-    ),
-    headless: bool = typer.Option(
-        False,
-        "--headless",
-        help="Run the browser in headless mode (no GUI).",
-    ),
     record: bool = typer.Option(
         False,
         "--record",
