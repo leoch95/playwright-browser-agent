@@ -54,15 +54,11 @@ Use Typer to expose two commands: `chat` and `batch`.
 def chat(
   provider: str = Option(...),
   model: str = Option("gpt-3.5-turbo"),
-  mode: MCPMode = Option(MCPMode.snapshot, help="Interaction mode: snapshot or vision"),
-  headless: bool = Option(False, help="Run browser headless"),
   record: bool = Option(False),
 ):
     cfg = config.load(
         provider=provider,
         model=model,
-        mode=mode.value,
-        headless=headless,
         record=record
     )
     asyncio.run(agent.run_agent_chat_session(cfg))
@@ -76,15 +72,11 @@ def batch(
   file: Path,
   provider: str = Option(...),  # same flags as chat
   model: str = Option(...),
-  mode: MCPMode = Option(MCPMode.snapshot, help="Interaction mode: snapshot or vision"),
-  headless: bool = Option(False, help="Run browser headless"),
   record: bool = Option(False),
 ):
     cfg = config.load(
         provider=provider,
         model=model,
-        mode=mode.value,
-        headless=headless,
         record=record
     )
     lines = [l for l in file.read_text().splitlines() if l.strip()]
@@ -157,23 +149,20 @@ class Agent:
 
 == 5. System Prompt Templates (prompts.py)
 
-Encapsulate LLM instructions; include screenshot hint only if `--record` is set. Dynamically adjust tool descriptions and interaction guidance based on `--mode` and `--headless`.
+Encapsulate LLM instructions; include screenshot hint only if `--record` is set.
 
 [source,python]
 ----
-def build_system_prompt(mode: str = "snapshot", headless: bool = False, record_screenshots: bool = False) -> str:
-    # Base template with placeholders for mode, headless status, tools, interactions
+def build_system_prompt(record_screenshots: bool = False) -> str:
+    # Base template with placeholders
     base_template = """
     You are a web browsing agent...
-    You operate in **{mode} Mode** {headless_status_detail}.
+    {headless_status_detail}
     ...
     Current Configuration:
-    - MCP Mode: {mode}
     - Headless: {headless_status}
     """
 
-    # Logic to select SNAPSHOT_TOOLS_DESC/VISION_TOOLS_DESC based on mode
-    # Logic to select SNAPSHOT_INTERACTION_INST/VISION_INTERACTION_INST based on mode
     # Format the template with selected descriptions, instructions, and status
 
     if record_screenshots:
