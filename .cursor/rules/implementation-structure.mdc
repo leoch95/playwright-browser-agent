@@ -11,12 +11,12 @@ This rule describes the intended code structure, file responsibilities, and CLI/
 
 ## Project Layout & File Roles
 
-- [main.py](mdc:main.py): Entrypoint. Should invoke the Typer CLI app (from `cli.py`).
-- cli.py: Defines the `pb-agent` CLI with `chat` and `batch` subcommands, using Typer. Handles CLI flags for provider, model, headless, record, etc.
-- config.py: Loads environment variables (via python-dotenv), merges model config JSON, applies CLI overrides, and validates required API keys.
-- agent.py: Implements the LangGraph agent, wiring up LiteLLM and Playwright-MCP. Exposes `run_chat_loop()` and `send()` for interactive and batch modes.
-- prompts.py: Builds system prompt templates, optionally including screenshot instructions if `--record` is set.
-- utils.py: Helpers for timestamping, keypress wait, and graceful shutdown (SIGINT/SIGTERM handling).
+- [main.py](mdc:main.py): Entrypoint. Imports and runs the Typer `app` from `playwright_browser_agent.cli`.
+- [cli.py](mdc:src/playwright_browser_agent/cli.py): Defines the `pb-agent` Typer CLI `app` with `chat` and `batch` subcommands. Handles CLI flags for provider, model, recording, MCP config, and artifact directory.
+- [config.py](mdc:src/playwright_browser_agent/config.py): Loads environment variables (via python-dotenv), merges model config JSON, applies CLI overrides, and validates required API keys.
+- [agent.py](mdc:src/playwright_browser_agent/agent.py): Implements the LangGraph agent, wiring up LiteLLM and Playwright-MCP. Exposes `run_chat_loop()` and `send()` for interactive and batch modes.
+- [prompts.py](mdc:src/playwright_browser_agent/prompts.py): Builds system prompt templates, optionally including screenshot instructions if `--record` is set.
+- [utils.py](mdc:src/playwright_browser_agent/utils.py): Helpers for timestamping, keypress wait, and graceful shutdown (SIGINT/SIGTERM handling).
 - [pyproject.toml](mdc:pyproject.toml): Declares dependencies and the `pb-agent` console script entrypoint.
 
 ---
@@ -25,7 +25,7 @@ This rule describes the intended code structure, file responsibilities, and CLI/
 
 - `pb-agent chat`: Starts an interactive session. Maintains a single browser/context. Exits on `exit`/`bye`.
 - `pb-agent batch <file>`: Reads instructions from a file, executes each line, and waits for keypress at end.
-- Both modes support `--headless` (run browser headless) and `--record` (save PNG screenshots after each step).
+- Both modes support `--record` (save PNG screenshots after each step to the specified artifact directory).
 - Streaming output: Agent thoughts/actions/observations are streamed to STDOUT in real time.
 - On exit or signal, the Python application cleans up its resources. Management of the external Playwright MCP server is handled separately.
 
@@ -33,9 +33,9 @@ This rule describes the intended code structure, file responsibilities, and CLI/
 
 ## Implementation Notes
 
-- All config is loaded via config.py, with CLI flags taking precedence over .env.
+- All config is loaded via `[config.py](mdc:src/playwright_browser_agent/config.py)`, with CLI flags taking precedence over .env.
 - The agent uses LiteLLM for LLM abstraction and `langchain-mcp-adapters` to connect the LangGraph agent to the externally managed Playwright-MCP server (`@playwright/mcp` Node process).
-- Screenshot PNGs (if `--record`) are saved under `artifacts/<timestamp>/step_<N>.png`.
+- Screenshot PNGs (if `--record`) are saved under `<artifacts_dir>/<timestamp>/step_<N>.png`.
 - Error handling: Retries/timeouts for browser actions, clear logging of failures.
 
 ---

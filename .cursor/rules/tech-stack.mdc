@@ -26,19 +26,19 @@ This rule aggregates the core engineering principles and stack-specific conventi
 
 ## Packaging / Project Layout
 
-* Source of truth for the CLI entry-point is [main.py](mdc:main.py) which wires Typer `app` from `cli.py`.
+* Source of truth for the CLI entry-point is [main.py](mdc:main.py) which wires Typer `app` from `[cli.py](mdc:src/playwright_browser_agent/cli.py)`.
 * Console script is declared in `[project.scripts]` within [pyproject.toml](mdc:pyproject.toml).
 * Keep modules small (≤ 400 LOC); if a file grows beyond, split logically.
 
 ## Typer (CLI)
 
-* All user-facing commands live in [cli.py](mdc:cli.py).
+* All user-facing commands live in `[cli.py](mdc:src/playwright_browser_agent/cli.py)`.
 * Provide explicit flag types & defaults; surface `--help` examples.
 * Stream output rather than buffering when possible (`rich` optional, not required).
 
 ## LangGraph
 
-* Build agents/tools in [agent.py](mdc:agent.py); keep prompts in [prompts.py](mdc:prompts.py).
+* Build agents/tools in `[agent.py](mdc:src/playwright_browser_agent/agent.py)`; keep prompts in `[prompts.py](mdc:src/playwright_browser_agent/prompts.py)`.
 * Use `langchain-mcp-adapters` to connect LangGraph agents to a running Playwright MCP server.
 * Always enable streaming for chat models.
 * Catch and log tool exceptions, retry with `tenacity` if transient.
@@ -57,7 +57,7 @@ This rule aggregates the core engineering principles and stack-specific conventi
 
 ## python-dotenv (Config)
 
-* [config.py](mdc:config.py) loads `.env` **before** any SDKs are initialised to ensure keys are present.
+* `[config.py](mdc:src/playwright_browser_agent/config.py)` loads `.env` **before** any SDKs are initialised to ensure keys are present.
 * CLI flag overrides always win over `.env`.
 
 ## Testing & CI
