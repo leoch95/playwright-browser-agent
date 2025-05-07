@@ -97,8 +97,6 @@ def chat(
         raise typer.Exit(code=1)
 
     print(f"Using LLM: {config.llm_provider}/{config.llm_model}")
-    print(f"MCP Mode: {config.mode}")
-    print(f"Headless: {config.headless}") # Print headless status
     print(f"Recording screenshots: {config.record}")
     print(f"Screenshots will be saved in subdirectories of: {config.artifacts_dir}")
 
@@ -140,17 +138,6 @@ def batch(
         "-m",
         help="LLM model override for batch mode.",
     ),
-    mode: MCPMode = typer.Option(
-        MCPMode.snapshot, # Default to snapshot
-        "--mode",
-        help="Interaction mode for Playwright MCP: 'snapshot' (default, accessibility) or 'vision' (screenshot-based).",
-        case_sensitive=False, # Allow lowercase input
-    ),
-    headless: bool = typer.Option(
-        False,
-        "--headless",
-        help="Run the browser headless during batch processing.",
-    ),
     record: bool = typer.Option(
         False,
         "--record",
@@ -175,8 +162,6 @@ def batch(
         config = load_config(
             llm_provider=llm_provider,
             llm_model=llm_model,
-            mode=mode.value, # Pass the string value of the enum
-            headless=headless, # Pass headless flag
             record=record,
             playwright_mcp_config_path=playwright_mcp_config_path, # Pass the config path
             artifacts_dir=artifacts_dir, # Pass the artifacts directory
@@ -185,8 +170,6 @@ def batch(
         raise typer.Exit(code=1)
 
     print(f"Using LLM: {config.llm_provider}/{config.llm_model}")
-    print(f"MCP Mode: {config.mode}")
-    print(f"Headless: {config.headless}") # Print headless status
     print(f"Recording screenshots: {config.record}")
     print(f"Screenshots will be saved in subdirectories of: {config.artifacts_dir}")
 

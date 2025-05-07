@@ -1,4 +1,17 @@
 {
+  "browser": {
+    "browserName": "chromium",
+    "launchOptions": {
+      "channel": "chrome",
+      "headless": true
+    },
+    "contextOptions": {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    }
+  },
   "capabilities": [
     "core",
     "tabs",
@@ -7,7 +20,8 @@
     "wait",
     "files"
   ],
-  "outputDir": "artifacts",
+  "vision": false,
+  "outputDir": "./temp",
   "tools": {
     "browser_take_screenshot": {
       "omitBase64": false

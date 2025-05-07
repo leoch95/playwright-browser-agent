@@ -168,22 +168,6 @@ def _setup_agent_resources(config: Settings) -> tuple[ChatLiteLLM, Dict[str, Any
         else:
             print(f"Warning: Provided MCP config path '{config.playwright_mcp_config_path}' does not exist or is not a file. Ignoring.")
 
-    # Configure MCP mode based on config.mode
-    if config.headless:
-        mcp_args.append("--headless")
-        print("Configuring Playwright MCP for Headless mode.")
-    else:
-        print("Configuring Playwright MCP for Headful mode (visible browser).")
-
-    # Configure Vision/Snapshot mode
-    if config.mode == "vision":
-        mcp_args.append("--vision")
-        print("Configuring Playwright MCP for Vision mode.")
-    elif config.mode == "snapshot":
-        print("Configuring Playwright MCP for Snapshot mode (default).")
-        # No extra args needed for snapshot mode
-    # else block removed as validation is done in config.py
-
     mcp_config = {
         "playwright": {
             "command": "npx",
@@ -201,8 +185,6 @@ def _setup_agent_resources(config: Settings) -> tuple[ChatLiteLLM, Dict[str, Any
     # 3. Build System Prompt String
     # build_system_prompt now returns a string
     system_prompt_string = build_system_prompt(
-        mode=config.mode,
-        headless=config.headless,
         record_screenshots=config.record
     )
 
