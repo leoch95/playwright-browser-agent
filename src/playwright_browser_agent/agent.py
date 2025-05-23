@@ -24,6 +24,7 @@ from langchain_litellm import ChatLiteLLM
 from langchain_mcp_adapters.client import StdioConnection  # Keep this
 from langchain_mcp_adapters.client import (MultiServerMCPClient, SSEConnection,
                                            WebsocketConnection)
+from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.checkpoint.memory import MemorySaver  # Import MemorySaver
 from langgraph.prebuilt import create_react_agent
 
@@ -208,27 +209,28 @@ async def run_agent_chat_session(config: Settings):
 
     # Initialize PlaywrightMCPTool via MultiServerMCPClient
     client = MultiServerMCPClient(connections=mcp_config)
-    tools = await client.get_tools()
+    async with client.session("playwright") as session:
+        tools = await load_mcp_tools(session)
 
-    # Use langgraph.prebuilt.create_react_agent (WITHOUT system_message/state_modifier)
-    agent_executor = create_react_agent(
-        llm,
-        tools,
-        # No system_message or state_modifier here
-        checkpointer=checkpointer
-    )
+        # Use langgraph.prebuilt.create_react_agent (WITHOUT system_message/state_modifier)
+        agent_executor = create_react_agent(
+            llm,
+            tools,
+            # No system_message or state_modifier here
+            checkpointer=checkpointer
+        )
 
-    # Start the interactive chat loop
-    # Pass a unique thread_id for the session
-    thread_id = str(uuid.uuid4())
-    print(f"\nStarting chat session (Thread ID: {thread_id}). Type 'exit' or 'bye' to end.")
-    await run_chat_loop(
-        agent_executor,
-        thread_id=thread_id,
-        initial_system_prompt=system_prompt_string,
-        record_screenshots=config.record,
-        screenshot_dir=screenshot_session_dir
-    )
+        # Start the interactive chat loop
+        # Pass a unique thread_id for the session
+        thread_id = str(uuid.uuid4())
+        print(f"\nStarting chat session (Thread ID: {thread_id}). Type 'exit' or 'bye' to end.")
+        await run_chat_loop(
+            agent_executor,
+            thread_id=thread_id,
+            initial_system_prompt=system_prompt_string,
+            record_screenshots=config.record,
+            screenshot_dir=screenshot_session_dir
+        )
 
 async def run_chat_loop(
     agent_executor: Any,
@@ -320,86 +322,86 @@ async def run_agent_batch_session(config: Settings, instructions: List[str]):
 
     # Initialize PlaywrightMCPTool via MultiServerMCPClient
     client = MultiServerMCPClient(connections=mcp_config)
-    tools = await client.get_tools()
+    async with client.session("playwright") as session:
+        tools = await load_mcp_tools(session)
+        # Use langgraph.prebuilt.create_react_agent (WITHOUT system_message/state_modifier)
+        agent_executor: AgentExecutor = create_react_agent( # type: ignore
+            llm,
+            tools,
+            # No system_message or state_modifier here
+            checkpointer=checkpointer
+        )
 
-    # Use langgraph.prebuilt.create_react_agent (WITHOUT system_message/state_modifier)
-    agent_executor: AgentExecutor = create_react_agent( # type: ignore
-        llm,
-        tools,
-        # No system_message or state_modifier here
-        checkpointer=checkpointer
-    )
+        # Process instructions one by one
+        # We need a way to pass the initial system prompt conceptually, but LangGraph handles it.
+        # The state_modifier injects it before each LLM call within the agent run.
 
-    # Process instructions one by one
-    # We need a way to pass the initial system prompt conceptually, but LangGraph handles it.
-    # The state_modifier injects it before each LLM call within the agent run.
+        # Create a unique thread_id for the entire batch run. Memory will accumulate
+        # across instructions within this single batch run.
+        batch_thread_id = f"batch-{uuid.uuid4()}"
+        print(f"\nStarting batch process (Thread ID: {batch_thread_id})")
 
-    # Create a unique thread_id for the entire batch run. Memory will accumulate
-    # across instructions within this single batch run.
-    batch_thread_id = f"batch-{uuid.uuid4()}"
-    print(f"\nStarting batch process (Thread ID: {batch_thread_id})")
+        step_counter = 0 # Initialize step counter for screenshots for this batch thread
 
-    step_counter = 0 # Initialize step counter for screenshots for this batch thread
+        for i, instruction in enumerate(instructions):
+            print(f"\n--- Instruction {i+1}/{len(instructions)} --- ")
+            print(f"💁 User: {instruction}")
 
-    for i, instruction in enumerate(instructions):
-        print(f"\n--- Instruction {i+1}/{len(instructions)} --- ")
-        print(f"💁 User: {instruction}")
+            # Construct messages for this turn, including System prompt only on the *very first* instruction
+            current_turn_messages: List[BaseMessage] = []
+            if i == 0:
+                current_turn_messages.append(SystemMessage(content=system_prompt_string))
+                print(f"\n🌐 System (Initial): {system_prompt_string}") # Show initial prompt
 
-        # Construct messages for this turn, including System prompt only on the *very first* instruction
-        current_turn_messages: List[BaseMessage] = []
-        if i == 0:
-            current_turn_messages.append(SystemMessage(content=system_prompt_string))
-            print(f"\n🌐 System (Initial): {system_prompt_string}") # Show initial prompt
+            current_turn_messages.append(HumanMessage(content=instruction))
 
-        current_turn_messages.append(HumanMessage(content=instruction))
+            # Create RunnableConfig with thread_id for the batch run
+            run_config = RunnableConfig(configurable={"thread_id": batch_thread_id})
 
-        # Create RunnableConfig with thread_id for the batch run
-        run_config = RunnableConfig(configurable={"thread_id": batch_thread_id})
+            try:
+                # Stream the agent's response for the current instruction using astream_events
+                print("\n🤖 Agent: ", end="", flush=True)
+                async for chunk in agent_executor.astream_events({"messages": current_turn_messages}, config=run_config, version="v2"):
+                    # Print intermediate steps/thoughts/tool calls/outputs
+                    event = chunk.get("event")
+                    data = chunk.get("data", {})
+                    name = chunk.get("name") # Tool name or agent name
 
-        try:
-            # Stream the agent's response for the current instruction using astream_events
-            print("\n🤖 Agent: ", end="", flush=True)
-            async for chunk in agent_executor.astream_events({"messages": current_turn_messages}, config=run_config, version="v2"):
-                # Print intermediate steps/thoughts/tool calls/outputs
-                event = chunk.get("event")
-                data = chunk.get("data", {})
-                name = chunk.get("name") # Tool name or agent name
+                    if event == "on_chat_model_stream":
+                        chunk_content = data.get("chunk")
+                        if chunk_content and hasattr(chunk_content, 'content') and chunk_content.content:
+                            print(chunk_content.content, end="", flush=True)
+                            # No manual accumulation
+                    elif event == "on_tool_start" and name:
+                        # tool_input = data.get("input", {}) # LangGraph typically puts tool input here - No longer needed for logging
+                        if name == "browser_take_screenshot":
+                            print(f"📸 Attempting to take screenshot...", flush=True)
+                        else:
+                            # print(f"🛠️ Calling tool [{name}] with input: {tool_input}...", end="", flush=True)
+                            print(f"🛠️ Calling tool [{name}]...", end="", flush=True)
+                    elif event == "on_tool_end" and name:
+                        tool_output_data = data.get("output") # LangGraph typically puts tool output here
+                        if name == "browser_take_screenshot":
+                            step_counter = _handle_screenshot_tool_end(
+                                tool_output_data,
+                                config.record,
+                                screenshot_session_dir,
+                                step_counter
+                            )
+                        else:
+                            # Generic success message for other tools, can be expanded if needed
+                            print(f" success.", flush=True)
+                        # Handle potential errors by inspecting 'data' if LangGraph provides it
+                        # Example (pseudo-code): if 'error' in data: print(f" failed: {data['error']}", flush=True)
 
-                if event == "on_chat_model_stream":
-                    chunk_content = data.get("chunk")
-                    if chunk_content and hasattr(chunk_content, 'content') and chunk_content.content:
-                        print(chunk_content.content, end="", flush=True)
-                        # No manual accumulation
-                elif event == "on_tool_start" and name:
-                    # tool_input = data.get("input", {}) # LangGraph typically puts tool input here - No longer needed for logging
-                    if name == "browser_take_screenshot":
-                        print(f"📸 Attempting to take screenshot...", flush=True)
-                    else:
-                        # print(f"🛠️ Calling tool [{name}] with input: {tool_input}...", end="", flush=True)
-                        print(f"🛠️ Calling tool [{name}]...", end="", flush=True)
-                elif event == "on_tool_end" and name:
-                    tool_output_data = data.get("output") # LangGraph typically puts tool output here
-                    if name == "browser_take_screenshot":
-                        step_counter = _handle_screenshot_tool_end(
-                            tool_output_data,
-                            config.record,
-                            screenshot_session_dir,
-                            step_counter
-                        )
-                    else:
-                        # Generic success message for other tools, can be expanded if needed
-                        print(f" success.", flush=True)
-                    # Handle potential errors by inspecting 'data' if LangGraph provides it
-                    # Example (pseudo-code): if 'error' in data: print(f" failed: {data['error']}", flush=True)
+                print() # Add a newline after the full response for the step
 
-            print() # Add a newline after the full response for the step
-
-        except Exception as e:
-            print(f"\n❌ Error processing instruction {i+1}: {e}")
-            print("Skipping to next instruction...")
-            # Optionally add an error message to the LangGraph state?
-            # Requires modifying the graph or handling outside.
-            continue # Move to the next instruction
+            except Exception as e:
+                print(f"\n❌ Error processing instruction {i+1}: {e}")
+                print("Skipping to next instruction...")
+                # Optionally add an error message to the LangGraph state?
+                # Requires modifying the graph or handling outside.
+                continue # Move to the next instruction
 
     print("\n--- Batch processing finished --- ")
 
